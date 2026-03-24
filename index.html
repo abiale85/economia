@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <title>Esercitatore di Contabilità Pro</title>
+    <style>
+        body { font-family: sans-serif; margin: 20px; background-color: #f4f7f6; }
+        .container { max-width: 1000px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h2 { border-bottom: 2px solid #2c3e50; padding-bottom: 10px; color: #2c3e50; }
+        .form-group { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+        input, select, button { padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
+        button { cursor: pointer; background-color: #27ae60; color: white; border: none; transition: 0.3s; }
+        button:hover { background-color: #219150; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        th { background-color: #ecf0f1; }
+        .mastrini-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; }
+        .mastrino { border: 1px solid #34495e; background: #fff; }
+        .mastrino-header { background: #34495e; color: white; text-align: center; padding: 5px; font-weight: bold; }
+        .mastrino-body { display: flex; justify-content: space-between; padding: 5px; font-size: 0.9em; }
+        .dare { color: green; }
+        .avere { color: red; }
+        .bilancio-container { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .total-row { font-weight: bold; background: #eee; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Esercitatore di Contabilità</h1>
+    
+    <h2>1. Libro Giornale</h2>
+    <div class="form-group">
+        <input type="text" id="conto" placeholder="Nome Conto (es. Banca c/c)">
+        <select id="tipo">
+            <option value="Dare">Dare</option>
+            <option value="Avere">Avere</option>
+        </select>
+        <input type="number" id="importo" placeholder="Importo €">
+        <select id="categoria">
+            <option value="SP">Stato Patrimoniale</option>
+            <option value="CE">Conto Economico</option>
+        </select>
+        <button onclick="aggiungiRiga()">Registra Operazione</button>
+    </div>
+
+    <table id="tabellaGiornale">
+        <thead>
+            <tr>
+                <th>Conto</th>
+                <th>Dare (€)</th>
+                <th>Avere (€)</th>
+                <th>Tipo</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+    <h2>2. Mastrini (Conti a T)</h2>
+    <div id="mastriniContainer" class="mastrini-grid"></div>
+
+    <h2>3. Risultato d'Esercizio (SP & CE)</h2>
+    <div class="bilancio-container">
+        <div>
+            <h3>Conto Economico</h3>
+            <table id="tabellaCE">
+                <thead><tr><th>Costi</th><th>Ricavi</th></tr></thead>
+                <tbody></tbody>
+            </table>
+        </div>
+        <div>
+            <h3>Stato Patrimoniale</h3>
+            <table id="tabellaSP">
+                <thead><tr><th>Attivo</th><th>Passivo/Netto</th></tr></thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    let transazioni = [];
+    let conti = {};
+
+    function aggiungiRiga() {
+        const nomeConto = document.getElementById('conto').value.trim();
+        const tipo = document.getElementById('tipo').value;
+        const importo = parseFloat(document.getElementById('importo').value);
+        const categoria = document.getElementById('categoria').value;
+
+        if (!nomeConto || isNaN(importo)) return alert("Inserisci dati validi");
+
+        const riga = { nomeConto, tipo, importo, categoria };
+        transazioni.push(riga);
+        
+        // Aggiorna logica conti
+        if (!conti[nomeConto]) {
+            conti[nomeConto] = { dare: 0, avere: 0, categoria: categoria };
+        }
+        
+        if (tipo === 'Dare') conti[nomeConto].dare += importo;
+        else conti[nomeConto].avere += importo;
+
+        aggiornaUI();
+        svuotaCampi();
+    }
+
+    function aggiornaUI() {
+        // 1. Aggiorna Libro Giornale
+        const tbodyG = document.querySelector("#tabellaGiornale tbody");
+        tbodyG.innerHTML = transazioni.map(t => `
+            <tr>
+                <td>${t.nomeConto}</td>
+                <td class="dare">${t.tipo === 'Dare' ? t.importo.toFixed(2) : ''}</td>
+                <td class="avere">${t.tipo === 'Avere' ? t.importo.toFixed(2) : ''}</td>
+                <td>${t.categoria}</td>
+            </tr>
+        `).join('');
+
+        // 2. Aggiorna Mastrini
+        const mContainer = document.getElementById('mastriniContainer');
+        mContainer.innerHTML = '';
+        for (let nome in conti) {
+            const c = conti[nome];
+            const saldo = c.dare - c.avere;
+            mContainer.innerHTML += `
+                <div class="mastrino">
+                    <div class="mastrino-header">${nome}</div>
+                    <div class="mastrino-body">
+                        <span class="dare">D: ${c.dare.toFixed(2)}</span>
+                        <span class="avere">A: ${c.avere.toFixed(2)}</span>
+                    </div>
+                    <div style="text-align:center; font-size:0.8em; border-top:1px solid #ccc">
+                        Saldo: ${saldo.toFixed(2)}
+                    </div>
+                </div>
+            `;
+        }
+
+        // 3. Aggiorna CE e SP
+        generaSintesi();
+    }
+
+    function generaSintesi() {
+        const ceBody = document.querySelector("#tabellaCE tbody");
+        const spBody = document.querySelector("#tabellaSP tbody");
+        ceBody.innerHTML = ""; spBody.innerHTML = "";
+
+        let totaleCosti = 0, totaleRicavi = 0, totaleAttivo = 0, totalePassivo = 0;
+
+        for (let nome in conti) {
+            const c = conti[nome];
+            const saldo = c.dare - c.avere;
+
+            if (c.categoria === 'CE') {
+                if (saldo > 0) { // Costo
+                    ceBody.innerHTML += `<tr><td>${nome}: ${saldo.toFixed(2)}</td><td></td></tr>`;
+                    totaleCosti += saldo;
+                } else if (saldo < 0) { // Ricavo
+                    ceBody.innerHTML += `<tr><td></td><td>${nome}: ${Math.abs(saldo).toFixed(2)}</td></tr>`;
+                    totaleRicavi += Math.abs(saldo);
+                }
+            } else {
+                if (saldo > 0) { // Attivo
+                    spBody.innerHTML += `<tr><td>${nome}: ${saldo.toFixed(2)}</td><td></td></tr>`;
+                    totaleAttivo += saldo;
+                } else if (saldo < 0) { // Passivo
+                    spBody.innerHTML += `<tr><td></td><td>${nome}: ${Math.abs(saldo).toFixed(2)}</td></tr>`;
+                    totalePassivo += Math.abs(saldo);
+                }
+            }
+        }
+
+        // Calcolo Utile/Perdita
+        const risultato = totaleRicavi - totaleCosti;
+        ceBody.innerHTML += `<tr class="total-row"><td>Tot: ${totaleCosti.toFixed(2)}</td><td>Tot: ${totaleRicavi.toFixed(2)}</td></tr>`;
+        ceBody.innerHTML += `<tr><td colspan="2" style="text-align:center">Risultato d'esercizio: <b>${risultato.toFixed(2)}</b></td></tr>`;
+    }
+
+    function svuotaCampi() {
+        document.getElementById('conto').value = '';
+        document.getElementById('importo').value = '';
+    }
+</script>
+
+</body>
+</html>
