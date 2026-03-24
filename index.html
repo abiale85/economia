@@ -3,234 +3,619 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Accounting Lab - Analisi & Bilancio</title>
+    <title>Accounting Lab - Esercizio Contabile MultiStep</title>
     <style>
         :root {
             --primary: #2c3e50; --secondary: #34495e; --accent: #3498db;
             --success: #27ae60; --danger: #e74c3c; --bg: #f8f9fa;
         }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); margin: 0; padding: 20px; color: #333; }
+        * { box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); margin: 0; padding: 15px; color: #333; }
         .container { max-width: 1200px; margin: auto; }
         
-        /* Dashboard Inserimento */
-        .panel { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 30px; }
-        h2 { color: var(--primary); border-left: 5px solid var(--accent); padding-left: 15px; margin-bottom: 20px; font-size: 1.4rem; }
+        /* Panel */
+        .panel { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 25px; }
+        h2 { color: var(--primary); border-left: 5px solid var(--accent); padding-left: 15px; margin: 15px 0 20px 0; font-size: 1.3rem; }
         
-        .grid-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; align-items: end; }
-        input, select { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
-        button { background: var(--accent); color: white; border: none; padding: 12px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.3s; }
+        .grid-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; align-items: end; }
+        input, select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }
+        button { background: var(--accent); color: white; border: none; padding: 10px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.3s; font-size: 14px; }
         button:hover { background: #2980b9; transform: translateY(-2px); }
+        button:active { transform: translateY(0); }
 
-        /* Libro Giornale Moderno */
-        .journal-table { width: 100%; border-collapse: separate; border-spacing: 0 8px; }
-        .journal-table th { padding: 15px; text-align: left; color: var(--secondary); font-weight: 600; border-bottom: 2px solid #eee; }
+        /* Tabelle */
+        .journal-table { width: 100%; border-collapse: separate; border-spacing: 0 6px; font-size: 0.9rem; }
+        .journal-table th { padding: 12px; text-align: left; color: var(--secondary); font-weight: 600; border-bottom: 2px solid #eee; font-size: 0.85rem; }
         .journal-row { background: white; transition: 0.2s; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
-        .journal-row td { padding: 15px; border-top: 1px solid #eee; border-bottom: 1px solid #eee; }
-        .journal-row:first-child td { border-top: none; }
-        .badge { padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; text-transform: uppercase; }
+        .journal-row td { padding: 12px; border: 1px solid #eee; }
+        .badge { padding: 3px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; text-transform: uppercase; }
         .vfa { background: #d4edda; color: #155724; } .vfp { background: #f8d7da; color: #721c24; }
         .ven { background: #fff3cd; color: #856404; } .vep { background: #d1ecf1; color: #0c5460; }
 
         /* Mastrini a T */
-        .mastrini-wrapper { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 25px; }
-        .mastrino-t { background: white; border-radius: 4px; overflow: hidden; }
-        .t-header { text-align: center; font-weight: bold; padding: 10px; border-bottom: 2px solid var(--primary); background: #eee; }
-        .t-content { display: grid; grid-template-columns: 1fr 1fr; min-height: 100px; position: relative; }
-        .t-content::after { content: ""; position: absolute; left: 50%; top: 0; bottom: 0; width: 2px; background: var(--primary); }
-        .t-side { padding: 10px; font-size: 0.85rem; }
-        .t-footer { border-top: 1px solid #ccc; padding: 5px; text-align: center; font-weight: bold; font-size: 0.9rem; }
+        .mastrini-wrapper { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; }
+        .mastrino-t { background: white; border-radius: 4px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+        .t-header { text-align: center; font-weight: bold; padding: 8px; border-bottom: 2px solid var(--primary); background: #eee; font-size: 0.85rem; }
+        .t-content { display: grid; grid-template-columns: 1fr 1fr; min-height: 80px; position: relative; }
+        .t-content::after { content: ""; position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; background: var(--primary); }
+        .t-side { padding: 8px; font-size: 0.75rem; }
+        .t-footer { border-top: 1px solid #ccc; padding: 4px; text-align: center; font-weight: bold; font-size: 0.8rem; }
 
         /* Bilancio */
-        .bilancio-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
-        .statement { background: white; padding: 20px; border-radius: 8px; }
+        .bilancio-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .statement { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+        .statement h3 { margin: 0 0 12px 0; font-size: 0.95rem; }
+        .statement table { width: 100%; font-size: 0.8rem; border-collapse: collapse; }
+        .statement table tr { border-bottom: 1px solid #eee; }
+        .statement table td { padding: 6px; }
         .val { text-align: right; font-family: 'Courier New', Courier, monospace; }
-        .total-box { background: var(--primary); color: white; padding: 10px; margin-top: 10px; border-radius: 4px; }
+        .total-box { background: var(--primary); color: white; padding: 8px; margin-top: 8px; border-radius: 4px; font-size: 0.9rem; }
+
+        /* Navigazione Step */
+        .step-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 12px; margin-bottom: 25px; box-shadow: 0 6px 20px rgba(0,0,0,0.1); }
+        .step-header h1 { margin: 0 0 8px 0; font-size: 1.5rem; }
+        .step-description { font-size: 0.95rem; line-height: 1.5; margin: 10px 0; opacity: 0.95; }
+        .step-badge { display: inline-block; background: rgba(255,255,255,0.2); padding: 6px 12px; border-radius: 20px; font-size: 0.8rem; margin: 8px 0; }
+
+        .step-progress { display: flex; justify-content: space-between; align-items: center; margin: 15px 0; gap: 6px; overflow-x: auto; padding: 5px 0; }
+        .step-dot { width: 35px; height: 35px; min-width: 35px; border-radius: 50%; background: #ddd; display: flex; align-items: center; justify-content: center; font-weight: bold; cursor: pointer; transition: 0.3s; font-size: 0.7rem; }
+        .step-dot.active { background: var(--accent); color: white; transform: scale(1.15); box-shadow: 0 0 12px rgba(52, 152, 219, 0.5); }
+        .step-dot.completed { background: var(--success); color: white; }
+        .step-line { flex: 1; height: 1px; background: #ddd; min-width: 8px; }
+        .step-line.active { background: var(--accent); }
+
+        .step-nav { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; margin-top: 20px; align-items: center; }
+        .step-nav button { padding: 10px 12px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.3s; font-size: 13px; }
+        .btn-prev { background: #95a5a6; color: white; }
+        .btn-prev:hover:not(:disabled) { background: #7f8c8d; }
+        .btn-next { background: var(--accent); color: white; }
+        .btn-next:hover:not(:disabled) { background: #2980b9; }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        #stepCounter { text-align: center; padding: 10px; font-size: 0.85rem; }
+
+        .step-info { background: #ecf0f1; padding: 12px; border-left: 4px solid var(--accent); border-radius: 4px; margin-bottom: 20px; font-size: 0.9rem; }
+        .step-info.fase-liquidazione { border-left-color: #e74c3c; }
+        .step-info.fase-capitalizzazione { border-left-color: #3498db; }
+
+        /* ========== TABLET (768px - 1024px) ========== */
+        @media (max-width: 1024px) {
+            body { padding: 12px; }
+            .container { max-width: 100%; }
+            .panel { padding: 15px; margin-bottom: 20px; }
+            h2 { font-size: 1.1rem; margin: 12px 0 15px 0; }
+            
+            .grid-form { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; }
+            input, select, button { font-size: 13px; padding: 9px; }
+            
+            .step-header { padding: 18px; }
+            .step-header h1 { font-size: 1.3rem; }
+            .step-description { font-size: 0.9rem; }
+            
+            .mastrini-wrapper { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+            .bilancio-grid { gap: 15px; }
+            .journal-table th { padding: 10px; font-size: 0.8rem; }
+            .journal-row td { padding: 10px; }
+        }
+
+        /* ========== SMARTPHONE (< 768px) ========== */
+        @media (max-width: 767px) {
+            body { padding: 8px; }
+            .container { max-width: 100%; }
+            
+            .panel { padding: 12px; margin-bottom: 15px; border-radius: 8px; }
+            h2 { font-size: 1rem; margin: 8px 0 12px 0; padding-left: 10px; }
+            h3 { font-size: 0.9rem; margin: 8px 0 10px 0; }
+            
+            .grid-form { grid-template-columns: 1fr; gap: 8px; }
+            input, select, button { font-size: 12px; padding: 8px; width: 100%; }
+            button { padding: 10px; }
+            
+            /* Step Header Mobile */
+            .step-header { 
+                padding: 15px; 
+                margin-bottom: 20px; 
+                border-radius: 8px; 
+            }
+            .step-header h1 { 
+                font-size: 1.2rem; 
+                margin: 0 0 8px 0; 
+                word-break: break-word;
+            }
+            .step-description { 
+                font-size: 0.85rem; 
+                line-height: 1.4; 
+                margin: 8px 0; 
+            }
+            .step-badge { 
+                font-size: 0.75rem; 
+                padding: 5px 10px; 
+                margin: 5px 0;
+            }
+            
+            /* Progress Mobile - Orizzontale scrollabile */
+            .step-progress { 
+                display: flex; 
+                gap: 4px; 
+                overflow-x: auto; 
+                padding: 10px 0; 
+                margin: 12px 0;
+                -webkit-overflow-scrolling: touch;
+            }
+            .step-dot { 
+                width: 32px; 
+                height: 32px; 
+                min-width: 32px; 
+                font-size: 0.65rem; 
+                border-radius: 50%;
+            }
+            .step-dot.active { 
+                transform: scale(1.1);
+            }
+            .step-line { 
+                display: none;
+            }
+            
+            /* Tabelle Mobile */
+            .journal-table { 
+                font-size: 0.8rem;
+                border-spacing: 0 4px;
+                display: block;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                white-space: nowrap;
+            }
+            .journal-table thead { display: none; }
+            .journal-table tbody { display: block; }
+            .journal-row { 
+                display: block; 
+                margin-bottom: 8px;
+                white-space: normal;
+                border: 1px solid #ddd;
+            }
+            .journal-row td { 
+                display: block;
+                padding: 8px 10px;
+                border: none;
+                border-bottom: 1px solid #f0f0f0;
+            }
+            .journal-row td:before { 
+                content: attr(data-label);
+                font-weight: bold;
+                display: block;
+                font-size: 0.7rem;
+                color: #666;
+            }
+            
+            /* Mastrini Mobile */
+            .mastrini-wrapper { 
+                grid-template-columns: 1fr; 
+                gap: 12px;
+            }
+            .mastrino-t { border-radius: 8px; }
+            .t-header { font-size: 0.8rem; padding: 6px; }
+            .t-content { min-height: 60px; }
+            .t-side { padding: 6px; font-size: 0.7rem; }
+            .t-footer { font-size: 0.75rem; padding: 3px; }
+            
+            /* Bilancio Mobile */
+            .bilancio-grid { 
+                grid-template-columns: 1fr; 
+                gap: 12px;
+            }
+            .statement { padding: 12px; }
+            .statement table { font-size: 0.75rem; }
+            .statement table td { padding: 5px; }
+            .total-box { padding: 6px; font-size: 0.85rem; }
+            
+            /* Step Info Mobile */
+            .step-info { 
+                padding: 10px;
+                font-size: 0.85rem;
+                margin-bottom: 15px;
+            }
+            
+            /* Nav Mobile */
+            .step-nav { 
+                grid-template-columns: 1fr 1fr;
+                gap: 8px;
+                margin-top: 15px;
+            }
+            .step-nav button { 
+                padding: 10px 8px; 
+                font-size: 12px;
+                width: 100%;
+            }
+            #stepCounter { 
+                grid-column: 1 / -1;
+                padding: 8px;
+                font-size: 0.8rem;
+                order: -1;
+            }
+            
+            /* Badge Mobile */
+            .badge { 
+                padding: 2px 4px; 
+                font-size: 0.65rem;
+            }
+        }
+
+        /* ========== VERY SMALL PHONES (< 360px) ========== */
+        @media (max-width: 359px) {
+            .step-header h1 { 
+                font-size: 1rem; 
+            }
+            .step-description { 
+                font-size: 0.8rem;
+            }
+            .step-dot { 
+                width: 28px; 
+                height: 28px; 
+                font-size: 0.6rem;
+            }
+            .step-nav button { 
+                font-size: 11px;
+                padding: 8px 4px;
+            }
+        }
+
+        /* ========== LANDSCAPE MOBILE ========== */
+        @media (max-height: 500px) and (orientation: landscape) {
+            .step-header { 
+                padding: 12px;
+                margin-bottom: 12px;
+            }
+            .step-header h1 { 
+                font-size: 1rem;
+                margin: 0 0 4px 0;
+            }
+            .step-description { 
+                display: none;
+            }
+            .step-info { 
+                display: none;
+            }
+        }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>Accounting Dashboard</h1>
-
-    <div class="panel">
-        <h2>Inserimento Operazione (Analisi Variazioni)</h2>
-        <div class="grid-form">
-            <div>
-                <label>Conto</label>
-                <input type="text" id="conto" placeholder="es. Banca c/c">
-            </div>
-            <div>
-                <label>Variazione</label>
-                <select id="tipoVar">
-                    <option value="VFA">VFA (+ Attivo / - Passivo)</option>
-                    <option value="VFP">VFP (- Attivo / + Passivo)</option>
-                    <option value="VEN">VEN (+ Costo / - Netto)</option>
-                    <option value="VEP">VEP (+ Ricavo / + Netto)</option>
-                </select>
-            </div>
-            <div>
-                <label>Importo (€)</label>
-                <input type="number" id="importo" placeholder="0.00">
-            </div>
-            <div>
-                <label>Destinazione</label>
-                <select id="categoria">
-                    <option value="SP">Stato Patrimoniale</option>
-                    <option value="CE">Conto Economico</option>
-                </select>
-            </div>
-            <button onclick="registra()">Registra</button>
-        </div>
+    <!-- Header dello Step -->
+    <div class="step-header">
+        <h1 id="stepTitle">Accounting Lab - Esercizio Didattico</h1>
+        <p id="stepPhase" class="step-badge" style="margin-right: 10px;">Fase</p>
+        <p id="stepDescription" class="step-description"></p>
     </div>
 
-    <h2>Libro Giornale</h2>
-    <table class="journal-table">
-        <thead>
-            <tr>
-                <th>Data/ID</th>
-                <th>Conto e Descrizione</th>
-                <th>Analisi</th>
-                <th style="text-align:right">Dare (€)</th>
-                <th style="text-align:right">Avere (€)</th>
-            </tr>
-        </thead>
-        <tbody id="journalBody">
-            </tbody>
-    </table>
+    <!-- Navigazione Progress -->
+    <div class="step-progress" id="stepProgress"></div>
 
-    <h2>Mastrini (Conti a T)</h2>
-    <div id="mastriniContainer" class="mastrini-wrapper">
-        </div>
+    <!-- Info Fase Corrente -->
+    <div id="stepInfo" class="step-info" style="display: none;"></div>
 
-    <div class="bilancio-grid" style="margin-top: 40px;">
-        <div class="statement">
-            <h3>Conto Economico (Costi e Ricavi)</h3>
-            <table width="100%" id="ceTable"></table>
-            <div id="utilePerdita" class="total-box">Risultato: € 0.00</div>
-        </div>
-        <div class="statement">
-            <h3>Stato Patrimoniale (Attivo e Passivo)</h3>
-            <table width="100%" id="spTable"></table>
-        </div>
+    <!-- Contenuto dello Step -->
+    <div id="stepContent"></div>
+
+    <!-- Pulsanti Navigazione -->
+    <div class="step-nav">
+        <button class="btn-prev" id="prevBtn" onclick="prevStep()">← Indietro</button>
+        <span id="stepCounter" style="text-align: center; padding: 12px;"></span>
+        <button class="btn-next" id="nextBtn" onclick="nextStep()">Avanti →</button>
     </div>
 </div>
 
 <script>
+    let currentStep = 0;
     let transazioni = [];
     let conti = {};
+    let contiRiferimento = {};
 
-    function registra() {
-        const nome = document.getElementById('conto').value.toUpperCase();
-        const tipoVar = document.getElementById('tipoVar').value;
-        const importo = parseFloat(document.getElementById('importo').value);
-        const cat = document.getElementById('categoria').value;
+    // Definizione dei step dell'esercizio
+    const esercizio = [
+        {
+            id: 0,
+            titolo: "Apertura della Società - Costituzione del Capitale",
+            fase: "Capitalizzazione",
+            faseClass: "fase-capitalizzazione",
+            descrizione: "La società TechStart S.r.l. è costituita con capitale sociale di €50.000 versato in banca.",
+            transazioni: [
+                { conto: "Banca c/c", tipoVar: "VFA", importo: 50000, categoria: "SP", descrizione: "Versamento capitale" }
+            ]
+        },
+        {
+            id: 1,
+            titolo: "Acquisto Impianti e Attrezzature",
+            fase: "Capitalizzazione",
+            faseClass: "fase-capitalizzazione",
+            descrizione: "Acquisto di impianti produttivi per €20.000 pagati tramite banca. Gli impianti sono ammortizzabili.",
+            transazioni: [
+                { conto: "Impianti e Macchinari", tipoVar: "VFA", importo: 20000, categoria: "SP", descrizione: "Acquisto impianti" },
+                { conto: "Banca c/c", tipoVar: "VFP", importo: 20000, categoria: "SP", descrizione: "Pagamento impianti" }
+            ]
+        },
+        {
+            id: 2,
+            titolo: "Rimanenze Iniziali di Materie Prime",
+            fase: "Capitalizzazione",
+            faseClass: "fase-capitalizzazione",
+            descrizione: "Acquisto di materie prime per €5.000 a credito dai fornitori.",
+            transazioni: [
+                { conto: "Rimanenze di materie prime", tipoVar: "VFA", importo: 5000, categoria: "SP", descrizione: "Acquisto materie prime" },
+                { conto: "Fornitori", tipoVar: "VFP", importo: 5000, categoria: "SP", descrizione: "Debito verso fornitori" }
+            ]
+        },
+        {
+            id: 3,
+            titolo: "Vendite Realizzate Durante l'Esercizio",
+            fase: "Liquidazione",
+            faseClass: "fase-liquidazione",
+            descrizione: "Vendita di prodotti finiti per €60.000, di cui €50.000 in contanti e €10.000 a credito.",
+            transazioni: [
+                { conto: "Banca c/c", tipoVar: "VFA", importo: 50000, categoria: "SP", descrizione: "Incasso vendite" },
+                { conto: "Clienti", tipoVar: "VFA", importo: 10000, categoria: "SP", descrizione: "Crediti verso clienti" },
+                { conto: "Ricavi di vendita", tipoVar: "VEP", importo: 60000, categoria: "CE", descrizione: "Ricavi realizzati" }
+            ]
+        },
+        {
+            id: 4,
+            titolo: "Costi di Produzione e Margine Lordo",
+            fase: "Liquidazione",
+            faseClass: "fase-liquidazione",
+            descrizione: "Consumo di materie prime per €3.000. Il costo del venduto è determinato dal consumo delle rimanenze.",
+            transazioni: [
+                { conto: "Costo del venduto", tipoVar: "VEN", importo: 3000, categoria: "CE", descrizione: "Costo materie consumate" },
+                { conto: "Rimanenze di materie prime", tipoVar: "VFP", importo: 3000, categoria: "SP", descrizione: "Consumo rimanenze" }
+            ]
+        },
+        {
+            id: 5,
+            titolo: "Ammortamenti dell'Esercizio",
+            fase: "Liquidazione",
+            faseClass: "fase-liquidazione",
+            descrizione: "Ammortamento degli impianti calcolato al 10% annuo. Quota ammortamento: €2.000.",
+            transazioni: [
+                { conto: "Ammortamenti", tipoVar: "VEN", importo: 2000, categoria: "CE", descrizione: "Ammortamento impianti (10%)" },
+                { conto: "Fondo ammortamento impianti", tipoVar: "VFP", importo: 2000, categoria: "SP", descrizione: "Fondo ammortamento" }
+            ]
+        },
+        {
+            id: 6,
+            titolo: "Pagamento Fornitori",
+            fase: "Liquidazione",
+            faseClass: "fase-liquidazione",
+            descrizione: "Versamento a favore dei fornitori di €5.000 per estinguere completamente il debito.",
+            transazioni: [
+                { conto: "Fornitori", tipoVar: "VFA", importo: 5000, categoria: "SP", descrizione: "Pagamento fornitori" },
+                { conto: "Banca c/c", tipoVar: "VFP", importo: 5000, categoria: "SP", descrizione: "Pagamento in banca" }
+            ]
+        },
+        {
+            id: 7,
+            titolo: "Incasso dai Clienti",
+            fase: "Liquidazione",
+            faseClass: "fase-liquidazione",
+            descrizione: "Incasso dei €10.000 di crediti verso i clienti.",
+            transazioni: [
+                { conto: "Banca c/c", tipoVar: "VFA", importo: 10000, categoria: "SP", descrizione: "Incasso crediti" },
+                { conto: "Clienti", tipoVar: "VFP", importo: 10000, categoria: "SP", descrizione: "Estinzione crediti" }
+            ]
+        },
+        {
+            id: 8,
+            titolo: "Bilancio di Verifica - Stato Patrimoniale e Conto Economico",
+            fase: "Liquidazione",
+            faseClass: "fase-liquidazione",
+            descrizione: "Visione finale dei bilanci: lo Stato Patrimoniale mostra l'attivo (liquidità, impianti netti) e il passivo (capitale + utile).",
+            transazioni: []
+        }
+    ];
 
-        if (!nome || isNaN(importo)) return alert("Compila tutti i campi correttamente.");
-
-        // Logica Dare/Avere basata sull'Analisi delle Variazioni
-        let dare = (tipoVar === 'VFA' || tipoVar === 'VEN') ? importo : 0;
-        let avere = (tipoVar === 'VFP' || tipoVar === 'VEP') ? importo : 0;
-
-        const transazione = {
-            id: transazioni.length + 1,
-            nome, tipoVar, dare, avere, cat,
-            data: new Date().toLocaleDateString()
-        };
-
-        transazioni.push(transazione);
-
-        // Aggiorna oggetto conti per i mastrini
-        if (!conti[nome]) conti[nome] = { dare: [], avere: [], cat: cat };
-        if (dare > 0) conti[nome].dare.push(dare);
-        if (avere > 0) conti[nome].avere.push(avere);
-
-        renderAll();
-        resetForm();
+    function initStep() {
+        currentStep = 0;
+        transazioni = [];
+        conti = {};
+        contiRiferimento = {};
+        renderStep();
     }
 
-    function renderAll() {
-        renderJournal();
-        renderMastrini();
-        renderBilancio();
+    function renderStep() {
+        const step = esercizio[currentStep];
+        
+        // Aggiorna header
+        document.getElementById('stepTitle').textContent = step.titolo;
+        document.getElementById('stepPhase').textContent = `📋 ${step.fase}`;
+        document.getElementById('stepPhase').style.background = 
+            step.fase === "Capitalizzazione" ? "rgba(52, 152, 219, 0.3)" : "rgba(231, 76, 60, 0.3)";
+        document.getElementById('stepDescription').textContent = step.descrizione;
+
+        // Aggiorna info fase
+        const stepInfo = document.getElementById('stepInfo');
+        stepInfo.innerHTML = `
+            <strong>🎯 Obiettivo di questo step:</strong><br>
+            ${step.descrizione}
+        `;
+        stepInfo.className = `step-info ${step.faseClass}`;
+
+        // Ripristina transazioni precedenti
+        transazioni = [];
+        conti = {};
+
+        // Applica tutte le transazioni degli step precedenti e attuali
+        for (let i = 0; i <= currentStep; i++) {
+            esercizio[i].transazioni.forEach(t => {
+                const transazione = {
+                    id: transazioni.length + 1,
+                    nome: t.conto.toUpperCase(),
+                    tipoVar: t.tipoVar,
+                    importo: t.importo,
+                    cat: t.categoria,
+                    descrizione: t.descrizione,
+                    data: new Date().toLocaleDateString()
+                };
+                transazioni.push(transazione);
+
+                if (!conti[t.conto]) {
+                    conti[t.conto] = { dare: [], avere: [], cat: t.categoria };
+                }
+
+                let dare = (t.tipoVar === 'VFA' || t.tipoVar === 'VEN') ? t.importo : 0;
+                let avere = (t.tipoVar === 'VFP' || t.tipoVar === 'VEP') ? t.importo : 0;
+
+                if (dare > 0) conti[t.conto].dare.push(dare);
+                if (avere > 0) conti[t.conto].avere.push(avere);
+            });
+        }
+
+        // Renderizza contenuto step
+        renderStepContent();
+        renderProgress();
+        updateNavigation();
     }
 
-    function renderJournal() {
-        const body = document.getElementById('journalBody');
-        body.innerHTML = transazioni.map(t => `
-            <tr class="journal-row">
-                <td style="color: #999; font-size: 0.8rem;">#${t.id}<br>${t.data}</td>
-                <td><strong>${t.nome}</strong><br><small>${t.cat === 'SP' ? 'Conto Patrimoniale' : 'Conto Economico'}</small></td>
-                <td><span class="badge ${t.tipoVar.toLowerCase()}">${t.tipoVar}</span></td>
-                <td class="val" style="color: var(--success)">${t.dare > 0 ? t.dare.toLocaleString('it-IT', {minimumFractionDigits: 2}) : ''}</td>
-                <td class="val" style="color: var(--danger)">${t.avere > 0 ? t.avere.toLocaleString('it-IT', {minimumFractionDigits: 2}) : ''}</td>
-            </tr>
-        `).join('');
-    }
+    function renderStepContent() {
+        const content = document.getElementById('stepContent');
+        const stepNum = currentStep + 1;
+        const totalSteps = esercizio.length;
 
-    function renderMastrini() {
-        const container = document.getElementById('mastriniContainer');
-        container.innerHTML = '';
+        let html = `<div class="panel"><h2>Libro Giornale - Evoluzione fino a Step ${stepNum}</h2>`;
+        html += '<table class="journal-table"><thead><tr>';
+        html += '<th>Data/ID</th><th>Conto e Descrizione</th><th>Analisi</th>';
+        html += '<th style="text-align:right">Dare (€)</th><th style="text-align:right">Avere (€)</th></tr></thead><tbody>';
+
+        transazioni.forEach(t => {
+            let dare = (t.tipoVar === 'VFA' || t.tipoVar === 'VEN') ? t.importo : 0;
+            let avere = (t.tipoVar === 'VFP' || t.tipoVar === 'VEP') ? t.importo : 0;
+            html += `<tr class="journal-row">
+                <td data-label="Data/ID" style="color: #999; font-size: 0.8rem;">#${t.id}<br>${t.data}</td>
+                <td data-label="Conto e Descrizione"><strong>${t.nome}</strong><br><small>${t.cat === 'SP' ? 'Stato Patrimoniale' : 'Conto Economico'}</small><br><small style="opacity:0.7">${t.descrizione}</small></td>
+                <td data-label="Analisi"><span class="badge ${t.tipoVar.toLowerCase()}">${t.tipoVar}</span></td>
+                <td data-label="Dare (€)" class="val" style="color: var(--success);">${dare > 0 ? dare.toLocaleString('it-IT', {minimumFractionDigits: 2}) : ''}</td>
+                <td data-label="Avere (€)" class="val" style="color: var(--danger);">${avere > 0 ? avere.toLocaleString('it-IT', {minimumFractionDigits: 2}) : ''}</td>
+            </tr>`;
+        });
+
+        html += '</tbody></table></div>';
+
+        // Mastrini
+        html += '<div class="panel"><h2>Conti a T (Mastrini)</h2><div class="mastrini-wrapper">';
 
         for (const [nome, dati] of Object.entries(conti)) {
             const totDare = dati.dare.reduce((a, b) => a + b, 0);
             const totAvere = dati.avere.reduce((a, b) => a + b, 0);
             const saldo = totDare - totAvere;
 
-            container.innerHTML += `
-                <div class="mastrino-t">
-                    <div class="t-header">${nome}</div>
-                    <div class="t-content">
-                        <div class="t-side">
-                            ${dati.dare.map(v => `<div>${v.toFixed(2)}</div>`).join('')}
-                        </div>
-                        <div class="t-side" style="text-align: right">
-                            ${dati.avere.map(v => `<div>${v.toFixed(2)}</div>`).join('')}
-                        </div>
-                    </div>
-                    <div class="t-footer">Saldo: ${saldo.toFixed(2)} €</div>
+            html += `<div class="mastrino-t">
+                <div class="t-header">${nome}</div>
+                <div class="t-content">
+                    <div class="t-side"><strong>Dare</strong><br>${dati.dare.map(v => `<div>${v.toFixed(2)}</div>`).join('')}</div>
+                    <div class="t-side" style="text-align: right"><strong>Avere</strong><br>${dati.avere.map(v => `<div>${v.toFixed(2)}</div>`).join('')}</div>
                 </div>
-            `;
+                <div class="t-footer">Saldo: ${saldo.toFixed(2)} €</div>
+            </div>`;
         }
-    }
 
-    function renderBilancio() {
-        const ceTable = document.getElementById('ceTable');
-        const spTable = document.getElementById('spTable');
+        html += '</div></div>';
+
+        // Bilanci
+        html += '<div class="bilancio-grid"><div class="statement"><h3>Conto Economico</h3><table width="100%">';
+        html += '<thead><tr><th>Costi (VEN)</th><th>Ricavi (VEP)</th></tr></thead><tbody>';
+
         let costi = 0, ricavi = 0;
-        
-        ceTable.innerHTML = '<tr><th>Costi (VEN)</th><th>Ricavi (VEP)</th></tr>';
-        spTable.innerHTML = '<tr><th>Attivo (VFA)</th><th>Passivo (VFP)</th></tr>';
-
         for (const [nome, dati] of Object.entries(conti)) {
-            const saldo = dati.dare.reduce((a, b) => a + b, 0) - dati.avere.reduce((a, b) => a + b, 0);
-            
             if (dati.cat === 'CE') {
+                const saldo = dati.dare.reduce((a, b) => a + b, 0) - dati.avere.reduce((a, b) => a + b, 0);
                 if (saldo > 0) {
-                    ceTable.innerHTML += `<tr><td>${nome}: ${saldo.toFixed(2)}</td><td></td></tr>`;
+                    html += `<tr><td data-label="Costi (VEN)">${nome}: ${saldo.toFixed(2)}</td><td data-label="Ricavi (VEP)"></td></tr>`;
                     costi += saldo;
-                } else {
-                    ceTable.innerHTML += `<tr><td></td><td>${nome}: ${Math.abs(saldo).toFixed(2)}</td></tr>`;
+                } else if (saldo < 0) {
+                    html += `<tr><td data-label="Costi (VEN)"></td><td data-label="Ricavi (VEP)">${nome}: ${Math.abs(saldo).toFixed(2)}</td></tr>`;
                     ricavi += Math.abs(saldo);
-                }
-            } else {
-                if (saldo > 0) {
-                    spTable.innerHTML += `<tr><td>${nome}: ${saldo.toFixed(2)}</td><td></td></tr>`;
-                } else {
-                    spTable.innerHTML += `<tr><td></td><td>${nome}: ${Math.abs(saldo).toFixed(2)}</td></tr>`;
                 }
             }
         }
-        
+        html += '</tbody></table>';
         const risultato = ricavi - costi;
-        document.getElementById('utilePerdita').innerHTML = `Risultato d'esercizio (Utile/Perdita): € ${risultato.toFixed(2)}`;
-        document.getElementById('utilePerdita').style.background = risultato >= 0 ? 'var(--success)' : 'var(--danger)';
+        html += `<div class="total-box" style="background: ${risultato >= 0 ? 'var(--success)' : 'var(--danger)'};"><strong>Risultato: € ${risultato.toFixed(2)}</strong></div></div>`;
+
+        html += '<div class="statement"><h3>Stato Patrimoniale</h3><table width="100%"><thead><tr><th>Attivo (VFA-VFP)</th><th>Passivo (VFP-VFA)</th></tr></thead><tbody>';
+        let attivo = 0, passivo = 0;
+        for (const [nome, dati] of Object.entries(conti)) {
+            if (dati.cat === 'SP') {
+                const saldo = dati.dare.reduce((a, b) => a + b, 0) - dati.avere.reduce((a, b) => a + b, 0);
+                if (saldo > 0) {
+                    html += `<tr><td data-label="Attivo">${nome}: ${saldo.toFixed(2)}</td><td data-label="Passivo"></td></tr>`;
+                    attivo += saldo;
+                } else if (saldo < 0) {
+                    html += `<tr><td data-label="Attivo"></td><td data-label="Passivo">${nome}: ${Math.abs(saldo).toFixed(2)}</td></tr>`;
+                    passivo += Math.abs(saldo);
+                }
+            }
+        }
+        html += `</tbody></table><div class="total-box"><strong>Attivo: € ${attivo.toFixed(2)}</strong></div>`;
+        html += `<div class="total-box" style="background: var(--secondary);"><strong>Passivo: € ${passivo.toFixed(2)}</strong></div></div></div>`;
+
+        document.getElementById('stepContent').innerHTML = html;
     }
 
-    function resetForm() {
-        document.getElementById('conto').value = '';
-        document.getElementById('importo').value = '';
-        document.getElementById('conto').focus();
+    function renderProgress() {
+        const progress = document.getElementById('stepProgress');
+        let html = '';
+
+        esercizio.forEach((step, idx) => {
+            const isActive = idx === currentStep;
+            const isCompleted = idx < currentStep;
+            const phaseName = step.fase === 'Capitalizzazione' ? 'K' : 'L';
+
+            html += `<div class="step-dot ${isActive ? 'active' : ''} ${isCompleted ? 'completed' : ''} phase-${phaseName.toLowerCase()}" 
+                        onclick="navigateToStep(${idx})" title="${step.titolo}">
+                        ${idx + 1}
+                    </div>`;
+            
+            if (idx < esercizio.length - 1) {
+                html += `<div class="step-line ${isActive || isCompleted ? 'active' : ''}"></div>`;
+            }
+        });
+
+        progress.innerHTML = html;
     }
+
+    function updateNavigation() {
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        const counter = document.getElementById('stepCounter');
+
+        prevBtn.disabled = currentStep === 0;
+        nextBtn.disabled = currentStep === esercizio.length - 1;
+        counter.textContent = `Step ${currentStep + 1} di ${esercizio.length}`;
+
+        if (currentStep > 0) prevBtn.textContent = `← ${esercizio[currentStep - 1].titolo.substring(0, 20)}...`;
+        if (currentStep < esercizio.length - 1) nextBtn.textContent = `${esercizio[currentStep + 1].titolo.substring(0, 20)}... →`;
+    }
+
+    function nextStep() {
+        if (currentStep < esercizio.length - 1) {
+            currentStep++;
+            renderStep();
+            window.scrollTo(0, 0);
+        }
+    }
+
+    function prevStep() {
+        if (currentStep > 0) {
+            currentStep--;
+            renderStep();
+            window.scrollTo(0, 0);
+        }
+    }
+
+    function navigateToStep(step) {
+        currentStep = step;
+        renderStep();
+        window.scrollTo(0, 0);
+    }
+
+    // Init al caricamento
+    window.addEventListener('load', initStep);
 </script>
 
 </body>
