@@ -1082,6 +1082,27 @@ function extractMovementsFromAnalysis(analysisItem) {
     return window.AnalysisComponents.extractMovements(rows, parseAmount, normalizeVarCode);
 }
 
+function placeAutoMastrinoAfterAnalysis(page, analysisId, mastrinoId) {
+    const analysisIndex = page.items.findIndex((x) => x.id === analysisId);
+    const mastrinoIndex = page.items.findIndex((x) => x.id === mastrinoId);
+    if (analysisIndex < 0 || mastrinoIndex < 0) return;
+
+    let insertAt = analysisIndex + 1;
+    while (
+        insertAt < page.items.length &&
+        page.items[insertAt].type === 'mastrino' &&
+        page.items[insertAt].data?.autoManaged
+    ) {
+        insertAt += 1;
+    }
+
+    const [mastrino] = page.items.splice(mastrinoIndex, 1);
+    if (mastrinoIndex < insertAt) {
+        insertAt -= 1;
+    }
+    page.items.splice(insertAt, 0, mastrino);
+}
+
 function syncBooksFromAnalysis(page, analysisItem) {
     const settings = getSettings();
     if (!settings.autoAddBooks && !settings.autoUpdateBooks) return;
@@ -1118,25 +1139,27 @@ function syncBooksFromAnalysis(page, analysisItem) {
             page,
             'mastrino',
             () => ({ conto: m.conto, stato: 'APERTO', entries: [] }),
-            (x) => (x.data?.conto || '').toLowerCase() === m.conto.toLowerCase() || x.data?.autoManaged
+            (x) => (x.data?.conto || '').toLowerCase() === m.conto.toLowerCase()
         );
 
         if (mastrino) {
             mastrino.data.conto = mastrino.data.conto || m.conto;
             mastrino.data.entries.push({
-                data: new Date().toLocaleDateString('it-IT'),
                 descrizione: `[AUTO da Analisi] ${m.descrizione}`.trim(),
                 dare: dare ? dare.toFixed(2) : '',
                 avere: avere ? avere.toFixed(2) : '',
                 autoRef: sourceId
             });
+            if (mastrino.data?.autoManaged) {
+                placeAutoMastrinoAfterAnalysis(page, analysisItem.id, mastrino.id);
+            }
         }
 
         const mastro = getOrCreateBook(
             page,
             'mastro',
             () => ({ conto: m.conto, entries: [] }),
-            (x) => (x.data?.conto || '').toLowerCase() === m.conto.toLowerCase() || x.data?.autoManaged
+            (x) => (x.data?.conto || '').toLowerCase() === m.conto.toLowerCase()
         );
 
         if (mastro) {

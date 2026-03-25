@@ -2,7 +2,6 @@
     function defaultEntry(type) {
         if (type === 'mastrino') {
             return {
-                data: new Date().toLocaleDateString('it-IT'),
                 descrizione: '',
                 dare: '',
                 avere: ''
@@ -42,7 +41,6 @@
                     conto: data.conto || '',
                     stato: data.stato || 'APERTO',
                     entries: (data.entries && data.entries.length ? data.entries : [legacy]).map((e) => ({
-                        data: e.data || '',
                         descrizione: e.descrizione || '',
                         dare: e.dare || '',
                         avere: e.avere || ''
@@ -119,7 +117,6 @@
         if (type === 'mastrino' && entryOnly) {
             return `
                 <div class="grid">
-                    <div><label>Data</label><input name="data" value="${escapeHtml(data.data || new Date().toLocaleDateString('it-IT'))}"></div>
                     <div><label>Descrizione</label><input name="descrizione" value="${escapeHtml(data.descrizione || '')}"></div>
                     <div><label>Dare</label><input name="dare" value="${escapeHtml(data.dare || '')}"></div>
                     <div><label>Avere</label><input name="avere" value="${escapeHtml(data.avere || '')}"></div>
@@ -187,12 +184,11 @@
             const totD = entries.reduce((s, e) => s + Number(e.dare || 0), 0);
             const totA = entries.reduce((s, e) => s + Number(e.avere || 0), 0);
             const saldo = (totD - totA).toFixed(2);
-            const dareLines = entries.map((e) => `${escapeHtml(e.data || '')} ${escapeHtml(e.descrizione || '')} ${escapeHtml(e.dare || '-')}`);
-            const avereLines = entries.map((e) => `${escapeHtml(e.data || '')} ${escapeHtml(e.descrizione || '')} ${escapeHtml(e.avere || '-')}`);
+            const dareLines = entries.map((e) => `${escapeHtml(e.descrizione || '')} ${escapeHtml(e.dare || '-')}`);
+            const avereLines = entries.map((e) => `${escapeHtml(e.descrizione || '')} ${escapeHtml(e.avere || '-')}`);
 
             const entryBlocks = entries.map((e, idx) => `
                 <tr>
-                    <td>${escapeHtml(e.data || '-')}</td>
                     <td>${escapeHtml(e.descrizione || '-')}</td>
                     <td>${escapeHtml(e.dare || '-')}</td>
                     <td>${escapeHtml(e.avere || '-')}</td>
@@ -204,8 +200,8 @@
                 return `
                     <div class="kv"><strong>Conto:</strong> ${escapeHtml(d.conto || '-')}</div>
                     <table class="ledger-table" style="margin-top:6px;">
-                        <thead><tr><th>Data</th><th>Descrizione</th><th>Dare</th><th>Avere</th><th>Azioni voce</th></tr></thead>
-                        <tbody>${entryBlocks || '<tr><td colspan="5">Nessuna voce.</td></tr>'}</tbody>
+                        <thead><tr><th>Descrizione</th><th>Dare</th><th>Avere</th><th>Azioni voce</th></tr></thead>
+                        <tbody>${entryBlocks || '<tr><td colspan="4">Nessuna voce.</td></tr>'}</tbody>
                     </table>
                     <div class="t-foot" style="margin-top:6px;">Saldo: ${saldo} | Stato: ${escapeHtml(d.stato || 'APERTO')}</div>
                 `;
@@ -279,7 +275,6 @@
     function buildEntryFromForm(type, raw) {
         if (type === 'mastrino') {
             return {
-                data: raw.data || '',
                 descrizione: raw.descrizione || '',
                 dare: raw.dare || '',
                 avere: raw.avere || ''
