@@ -40,6 +40,14 @@
         .t-side { padding: 10px; font-size: 0.85rem; }
         .t-footer { border-top: 1px solid #ccc; padding: 5px; text-align: center; font-weight: bold; font-size: 0.9rem; }
 
+        .t-accounts { display: grid; gap: 8px; }
+        .t-account { border: 1px solid #cfd8e6; border-radius: 10px; overflow: hidden; background: #fff; }
+        .t-account-head { text-align: center; font-weight: 800; padding: 6px; border-bottom: 2px solid #1f2937; background: #eef2f7; }
+        .t-account-body { position: relative; display: grid; grid-template-columns: 1fr 1fr; min-height: 64px; }
+        .t-account-body::after { content: ""; position: absolute; top: 0; bottom: 0; left: 50%; width: 1px; background: #1f2937; }
+        .t-col { padding: 8px; font-size: 0.8rem; }
+        .t-col-right { text-align: right; }
+
         /* Bilancio */
         .bilancio-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
         .statement { background: white; padding: 20px; border-radius: 8px; }
@@ -164,6 +172,8 @@
     </div>
 </div>
 
+<script src="analysis-components.js"></script>
+<script src="ledger-components.js"></script>
 <script>
     let transazioni = [];
     let conti = {};
@@ -242,24 +252,39 @@
         container.innerHTML = '';
 
         for (const [nome, dati] of Object.entries(conti)) {
-            const totDare = dati.dare.reduce((a, b) => a + b, 0);
-            const totAvere = dati.avere.reduce((a, b) => a + b, 0);
-            const saldo = totDare - totAvere;
+            const entries = [];
+            const maxRows = Math.max(dati.dare.length, dati.avere.length);
 
-            container.innerHTML += `
-                <div class="mastrino-t">
-                    <div class="t-header">${nome}</div>
-                    <div class="t-content">
-                        <div class="t-side">
-                            ${dati.dare.map(v => `<div>${v.toFixed(2)}</div>`).join('')}
-                        </div>
-                        <div class="t-side" style="text-align: right">
-                            ${dati.avere.map(v => `<div>${v.toFixed(2)}</div>`).join('')}
-                        </div>
-                    </div>
-                    <div class="t-footer">Saldo: ${saldo.toFixed(2)} €</div>
-                </div>
-            `;
+            for (let i = 0; i < maxRows; i++) {
+                entries.push({
+                    data: '',
+                    descrizione: '',
+                    dare: dati.dare[i] ? Number(dati.dare[i]).toFixed(2) : '',
+                    avere: dati.avere[i] ? Number(dati.avere[i]).toFixed(2) : ''
+                });
+            }
+
+            const item = {
+                id: `base-${nome}`,
+                type: 'mastrino',
+                data: {
+                    conto: nome,
+                    stato: 'APERTO',
+                    entries
+                }
+            };
+
+            container.innerHTML += LedgerComponents.renderItemBody(
+                item,
+                false,
+                (v) => String(v || '')
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#39;'),
+                () => ''
+            );
         }
     }
 
