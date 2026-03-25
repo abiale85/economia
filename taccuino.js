@@ -443,13 +443,41 @@ function renderItemBody(item) {
                     <tbody>
                         <tr>
                             <td><strong>SE</strong></td>
-                            <td>${escapeHtml(r.seEimporto || '-')} <small>${escapeHtml(r.seEconto || '')}</small></td>
-                            <td>${escapeHtml(r.seUimporto || '-')} <small>${escapeHtml(r.seUconto || '')}</small></td>
+                            <td>
+                                <div class="analysis-read-cell">
+                                    <div><strong>Imp.</strong> ${escapeHtml(r.seEimporto || '-')}</div>
+                                    <div><strong>Conto</strong> ${escapeHtml(r.seEconto || '-')}</div>
+                                    <div><strong>Desc.</strong> ${escapeHtml(r.seEdescrizione || '-')}</div>
+                                    <div><strong>Cod.</strong> ${escapeHtml(r.seEcodice || '-')}</div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="analysis-read-cell">
+                                    <div><strong>Imp.</strong> ${escapeHtml(r.seUimporto || '-')}</div>
+                                    <div><strong>Conto</strong> ${escapeHtml(r.seUconto || '-')}</div>
+                                    <div><strong>Desc.</strong> ${escapeHtml(r.seUdescrizione || '-')}</div>
+                                    <div><strong>Cod.</strong> ${escapeHtml(r.seUcodice || '-')}</div>
+                                </div>
+                            </td>
                         </tr>
                         <tr>
                             <td><strong>SF</strong></td>
-                            <td>${escapeHtml(r.sfEimporto || '-')} <small>${escapeHtml(r.sfEconto || '')}</small></td>
-                            <td>${escapeHtml(r.sfUimporto || '-')} <small>${escapeHtml(r.sfUconto || '')}</small></td>
+                            <td>
+                                <div class="analysis-read-cell">
+                                    <div><strong>Imp.</strong> ${escapeHtml(r.sfEimporto || '-')}</div>
+                                    <div><strong>Conto</strong> ${escapeHtml(r.sfEconto || '-')}</div>
+                                    <div><strong>Desc.</strong> ${escapeHtml(r.sfEdescrizione || '-')}</div>
+                                    <div><strong>Cod.</strong> ${escapeHtml(r.sfEcodice || '-')}</div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="analysis-read-cell">
+                                    <div><strong>Imp.</strong> ${escapeHtml(r.sfUimporto || '-')}</div>
+                                    <div><strong>Conto</strong> ${escapeHtml(r.sfUconto || '-')}</div>
+                                    <div><strong>Desc.</strong> ${escapeHtml(r.sfUdescrizione || '-')}</div>
+                                    <div><strong>Cod.</strong> ${escapeHtml(r.sfUcodice || '-')}</div>
+                                </div>
+                            </td>
                         </tr>
                     </tbody>
                 </table>
@@ -676,36 +704,51 @@ function buildTypeForm(type, data, mode) {
 
     if (type === 'analisi' && entryOnly) {
         return `
-            <fieldset style="border:1px solid #cbd5e1; border-radius:8px; padding:10px; margin-bottom:10px;">
-                <legend style="font-weight:700; font-size:0.9rem;">SE (Situazione Economica)</legend>
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;">
-                    <div><label style="font-weight:700; font-size:0.75rem;">E - Importo</label><input name="seEimporto" value="${escapeHtml(data.seEimporto || '')}" placeholder="123.45"></div>
-                    <div><label style="font-weight:700; font-size:0.75rem;">E - Conto</label><input name="seEconto" value="${escapeHtml(data.seEconto || '')}" placeholder="Attivo"></div>
-                    <div><label style="font-weight:700; font-size:0.75rem;">E - Descrizione</label><input name="seEdescrizione" value="${escapeHtml(data.seEdescrizione || '')}"></div>
-                    <div><label style="font-weight:700; font-size:0.75rem;">E - Codice</label><input name="seEcodice" value="${escapeHtml(data.seEcodice || '')}" placeholder="VFA"></div>
-                </div>
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-                    <div><label style="font-weight:700; font-size:0.75rem;">U - Importo</label><input name="seUimporto" value="${escapeHtml(data.seUimporto || '')}" placeholder="123.45"></div>
-                    <div><label style="font-weight:700; font-size:0.75rem;">U - Conto</label><input name="seUconto" value="${escapeHtml(data.seUconto || '')}" placeholder="Passivo"></div>
-                    <div><label style="font-weight:700; font-size:0.75rem;">U - Descrizione</label><input name="seUdescrizione" value="${escapeHtml(data.seUdescrizione || '')}"></div>
-                    <div><label style="font-weight:700; font-size:0.75rem;">U - Codice</label><input name="seUcodice" value="${escapeHtml(data.seUcodice || '')}" placeholder="VFP"></div>
-                </div>
-            </fieldset>
-            <fieldset style="border:1px solid #cbd5e1; border-radius:8px; padding:10px;">
-                <legend style="font-weight:700; font-size:0.9rem;">SF (Situazione Finanziaria)</legend>
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;">
-                    <div><label style="font-weight:700; font-size:0.75rem;">E - Importo</label><input name="sfEimporto" value="${escapeHtml(data.sfEimporto || '')}" placeholder="123.45"></div>
-                    <div><label style="font-weight:700; font-size:0.75rem;">E - Conto</label><input name="sfEconto" value="${escapeHtml(data.sfEconto || '')}" placeholder="Ricavo"></div>
-                    <div><label style="font-weight:700; font-size:0.75rem;">E - Descrizione</label><input name="sfEdescrizione" value="${escapeHtml(data.sfEdescrizione || '')}"></div>
-                    <div><label style="font-weight:700; font-size:0.75rem;">E - Codice</label><input name="sfEcodice" value="${escapeHtml(data.sfEcodice || '')}" placeholder="VEP"></div>
-                </div>
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-                    <div><label style="font-weight:700; font-size:0.75rem;">U - Importo</label><input name="sfUimporto" value="${escapeHtml(data.sfUimporto || '')}" placeholder="123.45"></div>
-                    <div><label style="font-weight:700; font-size:0.75rem;">U - Conto</label><input name="sfUconto" value="${escapeHtml(data.sfUconto || '')}" placeholder="Costo"></div>
-                    <div><label style="font-weight:700; font-size:0.75rem;">U - Descrizione</label><input name="sfUdescrizione" value="${escapeHtml(data.sfUdescrizione || '')}"></div>
-                    <div><label style="font-weight:700; font-size:0.75rem;">U - Codice</label><input name="sfUcodice" value="${escapeHtml(data.sfUcodice || '')}" placeholder="VEN"></div>
-                </div>
-            </fieldset>
+            <table class="analysis-matrix">
+                <thead>
+                    <tr><th></th><th>E</th><th>U</th></tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>SE</strong></td>
+                        <td>
+                            <div class="analysis-cell">
+                                <input name="seEimporto" value="${escapeHtml(data.seEimporto || '')}" placeholder="Importo">
+                                <input name="seEconto" value="${escapeHtml(data.seEconto || '')}" placeholder="Conto">
+                                <input name="seEdescrizione" value="${escapeHtml(data.seEdescrizione || '')}" placeholder="Descrizione">
+                                <input name="seEcodice" value="${escapeHtml(data.seEcodice || '')}" placeholder="Codice (VFA/VFP/VEN/VEP)">
+                            </div>
+                        </td>
+                        <td>
+                            <div class="analysis-cell">
+                                <input name="seUimporto" value="${escapeHtml(data.seUimporto || '')}" placeholder="Importo">
+                                <input name="seUconto" value="${escapeHtml(data.seUconto || '')}" placeholder="Conto">
+                                <input name="seUdescrizione" value="${escapeHtml(data.seUdescrizione || '')}" placeholder="Descrizione">
+                                <input name="seUcodice" value="${escapeHtml(data.seUcodice || '')}" placeholder="Codice (VFA/VFP/VEN/VEP)">
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>SF</strong></td>
+                        <td>
+                            <div class="analysis-cell">
+                                <input name="sfEimporto" value="${escapeHtml(data.sfEimporto || '')}" placeholder="Importo">
+                                <input name="sfEconto" value="${escapeHtml(data.sfEconto || '')}" placeholder="Conto">
+                                <input name="sfEdescrizione" value="${escapeHtml(data.sfEdescrizione || '')}" placeholder="Descrizione">
+                                <input name="sfEcodice" value="${escapeHtml(data.sfEcodice || '')}" placeholder="Codice (VFA/VFP/VEN/VEP)">
+                            </div>
+                        </td>
+                        <td>
+                            <div class="analysis-cell">
+                                <input name="sfUimporto" value="${escapeHtml(data.sfUimporto || '')}" placeholder="Importo">
+                                <input name="sfUconto" value="${escapeHtml(data.sfUconto || '')}" placeholder="Conto">
+                                <input name="sfUdescrizione" value="${escapeHtml(data.sfUdescrizione || '')}" placeholder="Descrizione">
+                                <input name="sfUcodice" value="${escapeHtml(data.sfUcodice || '')}" placeholder="Codice (VFA/VFP/VEN/VEP)">
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
         `;
     }
 
@@ -933,14 +976,22 @@ function updateItemMeta(item, raw) {
 function buildEntryFromForm(type, raw) {
     if (type === 'analisi') {
         return {
-            eLato: raw.eLato || 'E',
-            eDescrizione: raw.eDescrizione || '',
-            eVariazione: raw.eVariazione || '',
-            eImporto: raw.eImporto || '',
-            uLato: raw.uLato || 'U',
-            uDescrizione: raw.uDescrizione || '',
-            uVariazione: raw.uVariazione || '',
-            uImporto: raw.uImporto || ''
+            seEimporto: raw.seEimporto || '',
+            seEconto: raw.seEconto || '',
+            seEdescrizione: raw.seEdescrizione || '',
+            seEcodice: raw.seEcodice || '',
+            seUimporto: raw.seUimporto || '',
+            seUconto: raw.seUconto || '',
+            seUdescrizione: raw.seUdescrizione || '',
+            seUcodice: raw.seUcodice || '',
+            sfEimporto: raw.sfEimporto || '',
+            sfEconto: raw.sfEconto || '',
+            sfEdescrizione: raw.sfEdescrizione || '',
+            sfEcodice: raw.sfEcodice || '',
+            sfUimporto: raw.sfUimporto || '',
+            sfUconto: raw.sfUconto || '',
+            sfUdescrizione: raw.sfUdescrizione || '',
+            sfUcodice: raw.sfUcodice || ''
         };
     }
     if (type === 'mastrino') {
