@@ -1082,25 +1082,20 @@ function extractMovementsFromAnalysis(analysisItem) {
     return window.AnalysisComponents.extractMovements(rows, parseAmount, normalizeVarCode);
 }
 
-function placeAutoMastrinoAfterAnalysis(page, analysisId, mastrinoId) {
-    const analysisIndex = page.items.findIndex((x) => x.id === analysisId);
-    const mastrinoIndex = page.items.findIndex((x) => x.id === mastrinoId);
-    if (analysisIndex < 0 || mastrinoIndex < 0) return;
+function applyStaticAutoSectionOrder(page) {
+    const rank = {
+        note: 0,
+        analisi: 1,
+        mastrino: 2,
+        mastro: 3,
+        giornale: 4,
+        bilancio: 5
+    };
 
-    let insertAt = analysisIndex + 1;
-    while (
-        insertAt < page.items.length &&
-        page.items[insertAt].type === 'mastrino' &&
-        page.items[insertAt].data?.autoManaged
-    ) {
-        insertAt += 1;
-    }
-
-    const [mastrino] = page.items.splice(mastrinoIndex, 1);
-    if (mastrinoIndex < insertAt) {
-        insertAt -= 1;
-    }
-    page.items.splice(insertAt, 0, mastrino);
+    page.items = page.items
+        .map((item, idx) => ({ item, idx, r: rank[item.type] ?? 99 }))
+        .sort((a, b) => (a.r - b.r) || (a.idx - b.idx))
+        .map((x) => x.item);
 }
 
 function syncBooksFromAnalysis(page, analysisItem) {
@@ -1150,9 +1145,6 @@ function syncBooksFromAnalysis(page, analysisItem) {
                 avere: avere ? avere.toFixed(2) : '',
                 autoRef: sourceId
             });
-            if (mastrino.data?.autoManaged) {
-                placeAutoMastrinoAfterAnalysis(page, analysisItem.id, mastrino.id);
-            }
         }
 
         const mastro = getOrCreateBook(
@@ -1193,6 +1185,8 @@ function syncBooksFromAnalysis(page, analysisItem) {
             if (cls.area === 'SP') bilancio.data.spEntries.push(row);
         }
     });
+
+    applyStaticAutoSectionOrder(page);
 
     recalcDerivedFields(page);
 }
