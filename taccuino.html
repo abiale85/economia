@@ -184,6 +184,124 @@
             line-height: 1.45;
         }
 
+        .entry-actions {
+            margin-top: 8px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .chip {
+            display: inline-block;
+            padding: 2px 7px;
+            border-radius: 99px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            background: #e0f2fe;
+            color: #0c4a6e;
+        }
+
+        .schema-box {
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            background: #f8fbff;
+            padding: 10px;
+            margin-bottom: 8px;
+        }
+
+        .schema-grid {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .schema-col { text-align: center; }
+        .schema-letter { font-size: 1.4rem; font-weight: 800; line-height: 1; }
+        .schema-money { font-weight: 800; font-size: 1.1rem; }
+        .schema-arrow { font-size: 1.8rem; color: #f97316; }
+        .schema-foot {
+            margin-top: 7px;
+            border-top: 2px dashed #334155;
+            padding-top: 5px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            font-weight: 700;
+            font-size: 0.78rem;
+        }
+
+        .t-accounts {
+            display: grid;
+            gap: 8px;
+        }
+
+        .t-account {
+            border: 1px solid #cfd8e6;
+            border-radius: 10px;
+            overflow: hidden;
+            background: #fff;
+        }
+
+        .t-account-head {
+            text-align: center;
+            font-weight: 800;
+            padding: 6px;
+            border-bottom: 2px solid #1f2937;
+            background: #eef2f7;
+        }
+
+        .t-account-body {
+            position: relative;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            min-height: 64px;
+        }
+
+        .t-account-body::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 50%;
+            width: 1px;
+            background: #1f2937;
+        }
+
+        .t-col { padding: 8px; font-size: 0.8rem; }
+        .t-col-right { text-align: right; }
+        .t-foot {
+            border-top: 1px solid #dbe3ef;
+            padding: 6px 8px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            background: #fafcff;
+        }
+
+        .ledger-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.8rem;
+        }
+
+        .ledger-table th,
+        .ledger-table td {
+            border: 1px solid #dbe3ef;
+            padding: 6px;
+        }
+
+        .ledger-table th {
+            background: #eef5ff;
+            text-align: left;
+        }
+
+        .note-card {
+            border-left: 4px solid #0f766e;
+            background: #f5fefb;
+            padding: 9px;
+            margin-bottom: 7px;
+            border-radius: 8px;
+        }
+
         .kv { margin: 2px 0; }
         .empty {
             border: 1px dashed #94a3b8;
@@ -220,6 +338,8 @@
         @media (max-width: 900px) {
             .layout { grid-template-columns: 1fr; }
             .pages-list { max-height: 32vh; }
+            .schema-grid { grid-template-columns: 1fr; }
+            .schema-arrow { transform: rotate(90deg); }
         }
     </style>
 </head>
