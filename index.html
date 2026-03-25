@@ -6,44 +6,220 @@
     <title>Accounting Lab - Esercizio Contabile MultiStep</title>
     <style>
         :root {
-            --primary: #2c3e50; --secondary: #34495e; --accent: #3498db;
-            --success: #27ae60; --danger: #e74c3c; --bg: #f8f9fa;
+            --primary: #2c3e50;
+            --secondary: #34495e;
+            --accent: #3498db;
+            --success: #27ae60;
+            --danger: #e74c3c;
+            --bg: #f8f9fa;
         }
+
         * { box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); margin: 0; padding: 15px; color: #333; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg);
+            margin: 0;
+            padding: 15px;
+            color: #333;
+        }
+
         .container { max-width: 1200px; margin: auto; }
-        
-        /* Panel */
-        .panel { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 25px; }
-        h2 { color: var(--primary); border-left: 5px solid var(--accent); padding-left: 15px; margin: 15px 0 20px 0; font-size: 1.3rem; }
-        
-        .grid-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; align-items: end; }
-        input, select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }
-        button { background: var(--accent); color: white; border: none; padding: 10px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.3s; font-size: 14px; }
+
+        .panel {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            margin-bottom: 25px;
+        }
+
+        h2 {
+            color: var(--primary);
+            border-left: 5px solid var(--accent);
+            padding-left: 15px;
+            margin: 15px 0 20px 0;
+            font-size: 1.3rem;
+        }
+
+        .grid-form {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 12px;
+            align-items: end;
+        }
+
+        .builder-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .builder-grid .full { grid-column: 1 / -1; }
+
+        .builder-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .tx-list {
+            margin-top: 10px;
+            border: 1px solid #e6e6e6;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .tx-item {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 8px;
+            align-items: center;
+            padding: 8px 10px;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 0.85rem;
+        }
+
+        .tx-item:last-child { border-bottom: none; }
+
+        .tx-empty {
+            padding: 10px;
+            font-size: 0.85rem;
+            color: #6b7280;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        textarea {
+            min-height: 80px;
+            resize: vertical;
+        }
+
+        button {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.3s;
+            font-size: 14px;
+        }
+
         button:hover { background: #2980b9; transform: translateY(-2px); }
         button:active { transform: translateY(0); }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
 
-        /* Tabelle */
-        .journal-table { width: 100%; border-collapse: separate; border-spacing: 0 6px; font-size: 0.9rem; }
-        .journal-table th { padding: 12px; text-align: left; color: var(--secondary); font-weight: 600; border-bottom: 2px solid #eee; font-size: 0.85rem; }
-        .journal-row { background: white; transition: 0.2s; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
-        .journal-row td { padding: 12px; border: 1px solid #eee; }
-        .badge { padding: 3px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; text-transform: uppercase; }
-        .vfa { background: #d4edda; color: #155724; } .vfp { background: #f8d7da; color: #721c24; }
-        .ven { background: #fff3cd; color: #856404; } .vep { background: #d1ecf1; color: #0c5460; }
+        .btn-prev { background: #95a5a6; }
+        .btn-next { background: var(--accent); }
+        .btn-secondary { background: #95a5a6; }
+        .btn-danger { background: #e74c3c; }
+        .btn-example { background: #16a085; }
 
-        /* Mastrini a T */
-        .mastrini-wrapper { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; }
-        .mastrino-t { background: white; border-radius: 4px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
-        .t-header { text-align: center; font-weight: bold; padding: 8px; border-bottom: 2px solid var(--primary); background: #eee; font-size: 0.85rem; }
-        .t-content { display: grid; grid-template-columns: 1fr 1fr; min-height: 80px; position: relative; }
-        .t-content::after { content: ""; position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; background: var(--primary); }
+        .journal-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0 6px;
+            font-size: 0.9rem;
+        }
+
+        .journal-table th {
+            padding: 12px;
+            text-align: left;
+            color: var(--secondary);
+            font-weight: 600;
+            border-bottom: 2px solid #eee;
+            font-size: 0.85rem;
+        }
+
+        .journal-row {
+            background: white;
+            transition: 0.2s;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.02);
+        }
+
+        .journal-row td {
+            padding: 12px;
+            border: 1px solid #eee;
+        }
+
+        .badge {
+            padding: 3px 6px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .vfa { background: #d4edda; color: #155724; }
+        .vfp { background: #f8d7da; color: #721c24; }
+        .ven { background: #fff3cd; color: #856404; }
+        .vep { background: #d1ecf1; color: #0c5460; }
+
+        .mastrini-wrapper {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .mastrino-t {
+            background: white;
+            border-radius: 4px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        .t-header {
+            text-align: center;
+            font-weight: bold;
+            padding: 8px;
+            border-bottom: 2px solid var(--primary);
+            background: #eee;
+            font-size: 0.85rem;
+        }
+
+        .t-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            min-height: 80px;
+            position: relative;
+        }
+
+        .t-content::after {
+            content: "";
+            position: absolute;
+            left: 50%;
+            top: 0;
+            bottom: 0;
+            width: 1px;
+            background: var(--primary);
+        }
+
         .t-side { padding: 8px; font-size: 0.75rem; }
         .t-footer { border-top: 1px solid #ccc; padding: 4px; text-align: center; font-weight: bold; font-size: 0.8rem; }
 
-        /* Bilancio */
-        .bilancio-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-        .statement { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+        .bilancio-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .statement {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
         .statement h3 { margin: 0 0 12px 0; font-size: 0.95rem; }
         .statement table { width: 100%; font-size: 0.8rem; border-collapse: collapse; }
         .statement table tr { border-bottom: 1px solid #eee; }
@@ -51,738 +227,182 @@
         .val { text-align: right; font-family: 'Courier New', Courier, monospace; }
         .total-box { background: var(--primary); color: white; padding: 8px; margin-top: 8px; border-radius: 4px; font-size: 0.9rem; }
 
-        /* Navigazione Step */
-        .step-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 12px; margin-bottom: 25px; box-shadow: 0 6px 20px rgba(0,0,0,0.1); }
+        .step-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+        }
+
         .step-header h1 { margin: 0 0 8px 0; font-size: 1.5rem; }
         .step-description { font-size: 0.95rem; line-height: 1.5; margin: 10px 0; opacity: 0.95; }
-        .step-badge { display: inline-block; background: rgba(255,255,255,0.2); padding: 6px 12px; border-radius: 20px; font-size: 0.8rem; margin: 8px 0; }
+        .step-badge { display: inline-block; background: rgba(255, 255, 255, 0.2); padding: 6px 12px; border-radius: 20px; font-size: 0.8rem; margin: 8px 0; }
 
-        .step-progress { display: flex; justify-content: space-between; align-items: center; margin: 15px 0; gap: 6px; overflow-x: auto; padding: 5px 0; }
-        .step-dot { width: 35px; height: 35px; min-width: 35px; border-radius: 50%; background: #ddd; display: flex; align-items: center; justify-content: center; font-weight: bold; cursor: pointer; transition: 0.3s; font-size: 0.7rem; }
-        .step-dot.active { background: var(--accent); color: white; transform: scale(1.15); box-shadow: 0 0 12px rgba(52, 152, 219, 0.5); }
+        .step-progress {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 15px 0;
+            gap: 6px;
+            overflow-x: auto;
+            padding: 5px 0;
+        }
+
+        .step-dot {
+            width: 35px;
+            height: 35px;
+            min-width: 35px;
+            border-radius: 50%;
+            background: #ddd;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s;
+            font-size: 0.7rem;
+        }
+
+        .step-dot.active {
+            background: var(--accent);
+            color: white;
+            transform: scale(1.15);
+            box-shadow: 0 0 12px rgba(52, 152, 219, 0.5);
+        }
+
         .step-dot.completed { background: var(--success); color: white; }
         .step-line { flex: 1; height: 1px; background: #ddd; min-width: 8px; }
         .step-line.active { background: var(--accent); }
 
-        .step-nav { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; margin-top: 20px; align-items: center; }
-        .step-nav button { padding: 10px 12px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.3s; font-size: 13px; }
-        .btn-prev { background: #95a5a6; color: white; }
-        .btn-prev:hover:not(:disabled) { background: #7f8c8d; }
-        .btn-next { background: var(--accent); color: white; }
-        .btn-next:hover:not(:disabled) { background: #2980b9; }
-        button:disabled { opacity: 0.5; cursor: not-allowed; }
-        #stepCounter { text-align: center; padding: 10px; font-size: 0.85rem; }
-
-        .step-info { background: #ecf0f1; padding: 12px; border-left: 4px solid var(--accent); border-radius: 4px; margin-bottom: 20px; font-size: 0.9rem; }
-        .step-info.fase-liquidazione { border-left-color: #e74c3c; }
-        .step-info.fase-capitalizzazione { border-left-color: #3498db; }
-
-        .builder-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
-        .builder-grid .full { grid-column: 1 / -1; }
-        .builder-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
-        .builder-actions button { padding: 8px 12px; }
-        .tx-list { margin-top: 10px; border: 1px solid #e6e6e6; border-radius: 8px; overflow: hidden; }
-        .tx-item { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; padding: 8px 10px; border-bottom: 1px solid #f0f0f0; font-size: 0.85rem; }
-        .tx-item:last-child { border-bottom: none; }
-        .tx-empty { padding: 10px; font-size: 0.85rem; color: #6b7280; }
-        .btn-secondary { background: #95a5a6; }
-        .btn-danger { background: #e74c3c; }
-        textarea { width: 100%; border: 1px solid #ddd; border-radius: 6px; padding: 10px; font-size: 14px; resize: vertical; min-height: 80px; }
-
-        /* ========== TABLET (768px - 1024px) ========== */
-        @media (max-width: 1024px) {
-            body { padding: 12px; }
-            .container { max-width: 100%; }
-            .panel { padding: 15px; margin-bottom: 20px; }
-            h2 { font-size: 1.1rem; margin: 12px 0 15px 0; }
-            
-            .grid-form { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; }
-            input, select, button { font-size: 13px; padding: 9px; }
-            
-            .step-header { padding: 18px; }
-            .step-header h1 { font-size: 1.3rem; }
-            .step-description { font-size: 0.9rem; }
-            
-            .mastrini-wrapper { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
-            .bilancio-grid { gap: 15px; }
-            .journal-table th { padding: 10px; font-size: 0.8rem; }
-            .journal-row td { padding: 10px; }
+        .step-nav {
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            gap: 12px;
+            margin-top: 20px;
+            align-items: center;
         }
 
-        /* ========== SMARTPHONE (< 768px) ========== */
+        .step-nav button {
+            padding: 10px 12px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.3s;
+            font-size: 13px;
+        }
+
+        .step-info {
+            background: #ecf0f1;
+            padding: 12px;
+            border-left: 4px solid var(--accent);
+            border-radius: 4px;
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+        }
+
         @media (max-width: 767px) {
             body { padding: 8px; }
-            .container { max-width: 100%; }
-            
             .panel { padding: 12px; margin-bottom: 15px; border-radius: 8px; }
-            h2 { font-size: 1rem; margin: 8px 0 12px 0; padding-left: 10px; }
-            h3 { font-size: 0.9rem; margin: 8px 0 10px 0; }
-            
-            .grid-form { grid-template-columns: 1fr; gap: 8px; }
-            .builder-grid { grid-template-columns: 1fr; }
-            input, select, button { font-size: 12px; padding: 8px; width: 100%; }
-            button { padding: 10px; }
-            
-            /* Step Header Mobile */
-            .step-header { 
-                padding: 15px; 
-                margin-bottom: 20px; 
-                border-radius: 8px; 
-            }
-            .step-header h1 { 
-                font-size: 1.2rem; 
-                margin: 0 0 8px 0; 
-                word-break: break-word;
-            }
-            .step-description { 
-                font-size: 0.85rem; 
-                line-height: 1.4; 
-                margin: 8px 0; 
-            }
-            .step-badge { 
-                font-size: 0.75rem; 
-                padding: 5px 10px; 
-                margin: 5px 0;
-            }
-            
-            /* Progress Mobile - Orizzontale scrollabile */
-            .step-progress { 
-                display: flex; 
-                gap: 4px; 
-                overflow-x: auto; 
-                padding: 10px 0; 
-                margin: 12px 0;
-                -webkit-overflow-scrolling: touch;
-            }
-            .step-dot { 
-                width: 32px; 
-                height: 32px; 
-                min-width: 32px; 
-                font-size: 0.65rem; 
-                border-radius: 50%;
-            }
-            .step-dot.active { 
-                transform: scale(1.1);
-            }
-            .step-line { 
-                display: none;
-            }
-            
-            /* Tabelle Mobile */
-            .journal-table { 
-                font-size: 0.8rem;
-                border-spacing: 0 4px;
-                display: block;
-                overflow-x: auto;
-                -webkit-overflow-scrolling: touch;
-                white-space: nowrap;
-            }
+            .builder-grid, .grid-form, .bilancio-grid, .mastrini-wrapper { grid-template-columns: 1fr; }
+            .step-nav { grid-template-columns: 1fr 1fr; }
+            #stepCounter { grid-column: 1 / -1; order: -1; }
             .journal-table thead { display: none; }
-            .journal-table tbody { display: block; }
-            .journal-row { 
-                display: block; 
-                margin-bottom: 8px;
-                white-space: normal;
-                border: 1px solid #ddd;
-            }
-            .journal-row td { 
-                display: block;
-                padding: 8px 10px;
-                border: none;
-                border-bottom: 1px solid #f0f0f0;
-            }
-            .journal-row td:before { 
-                content: attr(data-label);
-                font-weight: bold;
-                display: block;
-                font-size: 0.7rem;
-                color: #666;
-            }
-            
-            /* Mastrini Mobile */
-            .mastrini-wrapper { 
-                grid-template-columns: 1fr; 
-                gap: 12px;
-            }
-            .mastrino-t { border-radius: 8px; }
-            .t-header { font-size: 0.8rem; padding: 6px; }
-            .t-content { min-height: 60px; }
-            .t-side { padding: 6px; font-size: 0.7rem; }
-            .t-footer { font-size: 0.75rem; padding: 3px; }
-            
-            /* Bilancio Mobile */
-            .bilancio-grid { 
-                grid-template-columns: 1fr; 
-                gap: 12px;
-            }
-            .statement { padding: 12px; }
-            .statement table { font-size: 0.75rem; }
-            .statement table td { padding: 5px; }
-            .total-box { padding: 6px; font-size: 0.85rem; }
-            
-            /* Step Info Mobile */
-            .step-info { 
-                padding: 10px;
-                font-size: 0.85rem;
-                margin-bottom: 15px;
-            }
-            
-            /* Nav Mobile */
-            .step-nav { 
-                grid-template-columns: 1fr 1fr;
-                gap: 8px;
-                margin-top: 15px;
-            }
-            .step-nav button { 
-                padding: 10px 8px; 
-                font-size: 12px;
-                width: 100%;
-            }
-            #stepCounter { 
-                grid-column: 1 / -1;
-                padding: 8px;
-                font-size: 0.8rem;
-                order: -1;
-            }
-            
-            /* Badge Mobile */
-            .badge { 
-                padding: 2px 4px; 
-                font-size: 0.65rem;
-            }
-        }
-
-        /* ========== VERY SMALL PHONES (< 360px) ========== */
-        @media (max-width: 359px) {
-            .step-header h1 { 
-                font-size: 1rem; 
-            }
-            .step-description { 
-                font-size: 0.8rem;
-            }
-            .step-dot { 
-                width: 28px; 
-                height: 28px; 
-                font-size: 0.6rem;
-            }
-            .step-nav button { 
-                font-size: 11px;
-                padding: 8px 4px;
-            }
-        }
-
-        /* ========== LANDSCAPE MOBILE ========== */
-        @media (max-height: 500px) and (orientation: landscape) {
-            .step-header { 
-                padding: 12px;
-                margin-bottom: 12px;
-            }
-            .step-header h1 { 
-                font-size: 1rem;
-                margin: 0 0 4px 0;
-            }
-            .step-description { 
-                display: none;
-            }
-            .step-info { 
-                display: none;
-            }
+            .journal-table, .journal-table tbody, .journal-row, .journal-row td { display: block; width: 100%; }
+            .journal-row td::before { content: attr(data-label); font-weight: bold; display: block; font-size: 0.7rem; color: #666; }
         }
     </style>
 </head>
 <body>
-
-<div class="container">
-    <!-- Header dello Step -->
-    <div class="step-header">
-        <h1 id="stepTitle">Accounting Lab - Esercizio Didattico</h1>
-        <p id="stepPhase" class="step-badge" style="margin-right: 10px;">Fase</p>
-        <p id="stepDescription" class="step-description"></p>
-    </div>
-
-    <!-- Navigazione Progress -->
-    <div class="step-progress" id="stepProgress"></div>
-
-    <!-- Info Fase Corrente -->
-    <div id="stepInfo" class="step-info" style="display: none;"></div>
-
-    <div class="panel">
-        <h2>Editor Esercizio Multi-Step</h2>
-        <div class="builder-grid">
-            <div>
-                <label for="editorTitle">Titolo step</label>
-                <input id="editorTitle" type="text" placeholder="Es. Acquisto merci a credito">
-            </div>
-            <div>
-                <label for="editorPhase">Fase</label>
-                <select id="editorPhase">
-                    <option value="Capitalizzazione">Capitalizzazione</option>
-                    <option value="Liquidazione">Liquidazione</option>
-                </select>
-            </div>
-            <div class="full">
-                <label for="editorDescription">Testo dello step</label>
-                <textarea id="editorDescription" placeholder="Scrivi il testo che vuoi analizzare in questo step"></textarea>
-            </div>
+    <div class="container">
+        <div class="step-header">
+            <h1 id="stepTitle">Accounting Lab - Esercizio Didattico</h1>
+            <p id="stepPhase" class="step-badge" style="margin-right: 10px;">Operazione</p>
+            <p id="stepDescription" class="step-description"></p>
         </div>
 
-        <h3>Aggiungi movimento contabile</h3>
-        <div class="grid-form">
-            <div>
-                <label for="txConto">Conto</label>
-                <input id="txConto" type="text" placeholder="Es. Merci c/acquisti">
-            </div>
-            <div>
-                <label for="txTipoVar">Analisi</label>
-                <select id="txTipoVar">
-                    <option value="VFA">VFA</option>
-                    <option value="VFP">VFP</option>
-                    <option value="VEN">VEN</option>
-                    <option value="VEP">VEP</option>
-                </select>
-            </div>
-            <div>
-                <label for="txCategoria">Prospetto</label>
-                <select id="txCategoria">
-                    <option value="SP">SP</option>
-                    <option value="CE">CE</option>
-                </select>
-            </div>
-            <div>
-                <label for="txImporto">Importo €</label>
-                <input id="txImporto" type="number" min="0" step="0.01" placeholder="0.00">
-            </div>
-            <div>
-                <label for="txDescrizione">Descrizione</label>
-                <input id="txDescrizione" type="text" placeholder="Dettaglio movimento">
-            </div>
-            <button onclick="addTransactionToCurrentStep()">Aggiungi movimento</button>
-        </div>
+        <div class="step-progress" id="stepProgress"></div>
+        <div id="stepInfo" class="step-info" style="display: none;"></div>
 
-        <div id="txList" class="tx-list"></div>
-
-        <div class="builder-actions">
-            <button class="btn-secondary" onclick="saveCurrentStep()">Salva step</button>
-            <button onclick="createNewStep()">Nuovo step</button>
-            <button class="btn-danger" onclick="deleteCurrentStep()">Elimina step</button>
-        </div>
-    </div>
-
-    <!-- Contenuto dello Step -->
-    <div id="stepContent"></div>
-
-    <!-- Pulsanti Navigazione -->
-    <div class="step-nav">
-        <button class="btn-prev" id="prevBtn" onclick="prevStep()">← Indietro</button>
-        <span id="stepCounter" style="text-align: center; padding: 12px;"></span>
-        <button class="btn-next" id="nextBtn" onclick="nextStep()">Avanti →</button>
-    </div>
-</div>
-
-<script>
-    let currentStep = 0;
-    let transazioni = [];
-    let conti = {};
-    let contiRiferimento = {};
-    let esercizio = [];
-    const STORAGE_KEY = 'accountingLab.esercizio.v1';
-    let autosaveBound = false;
-
-    function phaseClass(fase) {
-        return fase === 'Liquidazione' ? 'fase-liquidazione' : 'fase-capitalizzazione';
-    }
-
-    function nuovoStep() {
-        return {
-            id: Date.now() + Math.random(),
-            titolo: 'Nuovo step',
-            fase: 'Capitalizzazione',
-            faseClass: phaseClass('Capitalizzazione'),
-            descrizione: '',
-            transazioni: []
-        };
-    }
-
-    function saveToLocalStorage() {
-        const payload = {
-            version: 1,
-            currentStep,
-            esercizio
-        };
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
-    }
-
-    function loadFromLocalStorage() {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if (!raw) return false;
-
-        try {
-            const data = JSON.parse(raw);
-            if (!data || !Array.isArray(data.esercizio) || data.esercizio.length === 0) {
-                return false;
-            }
-
-            esercizio = data.esercizio.map((step) => {
-                const fallback = nuovoStep();
-                const fase = step && step.fase === 'Liquidazione' ? 'Liquidazione' : 'Capitalizzazione';
-                return {
-                    ...fallback,
-                    ...step,
-                    fase,
-                    faseClass: phaseClass(fase),
-                    transazioni: Array.isArray(step?.transazioni) ? step.transazioni : []
-                };
-            });
-
-            const savedStep = Number.isInteger(data.currentStep) ? data.currentStep : 0;
-            currentStep = Math.max(0, Math.min(savedStep, esercizio.length - 1));
-            return true;
-        } catch (error) {
-            console.warn('LocalStorage non valido, inizializzo nuovo esercizio.', error);
-            return false;
-        }
-    }
-
-    function syncCurrentStepFromEditor() {
-        if (!esercizio.length) return;
-        const step = esercizio[currentStep];
-        step.titolo = document.getElementById('editorTitle').value.trim() || 'Step senza titolo';
-        step.fase = document.getElementById('editorPhase').value;
-        step.faseClass = phaseClass(step.fase);
-        step.descrizione = document.getElementById('editorDescription').value.trim();
-    }
-
-    function autosaveEditorDraft() {
-        syncCurrentStepFromEditor();
-        saveToLocalStorage();
-    }
-
-    function setupAutosaveListeners() {
-        if (autosaveBound) return;
-
-        document.getElementById('editorTitle').addEventListener('input', autosaveEditorDraft);
-        document.getElementById('editorDescription').addEventListener('input', autosaveEditorDraft);
-        document.getElementById('editorPhase').addEventListener('change', autosaveEditorDraft);
-        window.addEventListener('beforeunload', saveToLocalStorage);
-
-        autosaveBound = true;
-    }
-
-    function initStep() {
-        currentStep = 0;
-        transazioni = [];
-        conti = {};
-        contiRiferimento = {};
-        if (!loadFromLocalStorage()) {
-            esercizio = [nuovoStep()];
-        }
-        setupAutosaveListeners();
-        renderStep();
-    }
-
-    function renderStep() {
-        if (!esercizio.length) {
-            esercizio.push(nuovoStep());
-            currentStep = 0;
-        }
-
-        if (currentStep >= esercizio.length) {
-            currentStep = esercizio.length - 1;
-        }
-
-        const step = esercizio[currentStep];
-        
-        // Aggiorna header
-        document.getElementById('stepTitle').textContent = step.titolo;
-        document.getElementById('stepPhase').textContent = `📋 ${step.fase}`;
-        document.getElementById('stepPhase').style.background = 
-            step.fase === "Capitalizzazione" ? "rgba(52, 152, 219, 0.3)" : "rgba(231, 76, 60, 0.3)";
-        document.getElementById('stepDescription').textContent = step.descrizione;
-
-        // Aggiorna info fase
-        const stepInfo = document.getElementById('stepInfo');
-        stepInfo.innerHTML = `
-            <strong>🎯 Obiettivo di questo step:</strong><br>
-            ${step.descrizione || 'Scrivi il testo del tuo step nell\'editor qui sotto, poi aggiungi i movimenti contabili.'}
-        `;
-        stepInfo.className = `step-info ${step.faseClass}`;
-
-        // Ripristina transazioni precedenti
-        transazioni = [];
-        conti = {};
-
-        // Applica tutte le transazioni degli step precedenti e attuali
-        for (let i = 0; i <= currentStep; i++) {
-            esercizio[i].transazioni.forEach(t => {
-                const transazione = {
-                    id: transazioni.length + 1,
-                    nome: t.conto.toUpperCase(),
-                    tipoVar: t.tipoVar,
-                    importo: t.importo,
-                    cat: t.categoria,
-                    descrizione: t.descrizione,
-                    data: new Date().toLocaleDateString()
-                };
-                transazioni.push(transazione);
-
-                if (!conti[t.conto]) {
-                    conti[t.conto] = { dare: [], avere: [], cat: t.categoria };
-                }
-
-                let dare = (t.tipoVar === 'VFA' || t.tipoVar === 'VEN') ? t.importo : 0;
-                let avere = (t.tipoVar === 'VFP' || t.tipoVar === 'VEP') ? t.importo : 0;
-
-                if (dare > 0) conti[t.conto].dare.push(dare);
-                if (avere > 0) conti[t.conto].avere.push(avere);
-            });
-        }
-
-        // Renderizza contenuto step
-        populateEditor(step);
-        renderEditorTransactions(step);
-        renderStepContent();
-        renderProgress();
-        updateNavigation();
-        saveToLocalStorage();
-    }
-
-    function populateEditor(step) {
-        document.getElementById('editorTitle').value = step.titolo;
-        document.getElementById('editorPhase').value = step.fase;
-        document.getElementById('editorDescription').value = step.descrizione;
-    }
-
-    function saveCurrentStep() {
-        syncCurrentStepFromEditor();
-        renderStep();
-    }
-
-    function addTransactionToCurrentStep() {
-        const conto = document.getElementById('txConto').value.trim();
-        const tipoVar = document.getElementById('txTipoVar').value;
-        const categoria = document.getElementById('txCategoria').value;
-        const importoRaw = document.getElementById('txImporto').value;
-        const descrizione = document.getElementById('txDescrizione').value.trim();
-        const importo = parseFloat(importoRaw);
-
-        if (!conto || !importo || importo <= 0) {
-            alert('Inserisci almeno conto e importo maggiore di zero.');
-            return;
-        }
-
-        esercizio[currentStep].transazioni.push({
-            conto,
-            tipoVar,
-            importo,
-            categoria,
-            descrizione: descrizione || 'Movimento inserito manualmente'
-        });
-
-        document.getElementById('txConto').value = '';
-        document.getElementById('txImporto').value = '';
-        document.getElementById('txDescrizione').value = '';
-
-        renderStep();
-    }
-
-    function removeTransaction(index) {
-        esercizio[currentStep].transazioni.splice(index, 1);
-        renderStep();
-    }
-
-    function renderEditorTransactions(step) {
-        const txList = document.getElementById('txList');
-        if (!step.transazioni.length) {
-            txList.innerHTML = '<div class="tx-empty">Nessun movimento nello step corrente.</div>';
-            return;
-        }
-
-        txList.innerHTML = step.transazioni.map((t, idx) => `
-            <div class="tx-item">
+        <div class="panel">
+            <h2>Editor Esercizio Multi-Step</h2>
+            <div class="builder-grid">
                 <div>
-                    <strong>${t.conto}</strong> | ${t.tipoVar} | ${t.categoria} | € ${Number(t.importo).toFixed(2)}<br>
-                    <small>${t.descrizione || ''}</small>
+                    <label for="editorTitle">Titolo step</label>
+                    <input id="editorTitle" type="text" placeholder="Es. Acquisto merci a credito">
                 </div>
-                <button class="btn-danger" onclick="removeTransaction(${idx})">Rimuovi</button>
+                <div class="full">
+                    <label for="editorDescriptionCap">Testo Capitalizzazione</label>
+                    <textarea id="editorDescriptionCap" placeholder="Scrivi la parte di capitalizzazione dello step"></textarea>
+                </div>
+                <div class="full">
+                    <label for="editorDescriptionLiq">Testo Liquidazione</label>
+                    <textarea id="editorDescriptionLiq" placeholder="Scrivi la parte di liquidazione dello step"></textarea>
+                </div>
             </div>
-        `).join('');
-    }
 
-    function createNewStep() {
-        saveCurrentStep();
-        esercizio.push(nuovoStep());
-        currentStep = esercizio.length - 1;
-        renderStep();
-        window.scrollTo(0, 0);
-    }
-
-    function deleteCurrentStep() {
-        if (esercizio.length === 1) {
-            esercizio[0] = nuovoStep();
-            currentStep = 0;
-            renderStep();
-            return;
-        }
-
-        esercizio.splice(currentStep, 1);
-        if (currentStep >= esercizio.length) {
-            currentStep = esercizio.length - 1;
-        }
-        renderStep();
-    }
-
-    function renderStepContent() {
-        const content = document.getElementById('stepContent');
-        const stepNum = currentStep + 1;
-        const totalSteps = esercizio.length;
-
-        let html = `<div class="panel"><h2>Libro Giornale - Evoluzione fino a Step ${stepNum}</h2>`;
-        html += '<table class="journal-table"><thead><tr>';
-        html += '<th>Data/ID</th><th>Conto e Descrizione</th><th>Analisi</th>';
-        html += '<th style="text-align:right">Dare (€)</th><th style="text-align:right">Avere (€)</th></tr></thead><tbody>';
-
-        transazioni.forEach(t => {
-            let dare = (t.tipoVar === 'VFA' || t.tipoVar === 'VEN') ? t.importo : 0;
-            let avere = (t.tipoVar === 'VFP' || t.tipoVar === 'VEP') ? t.importo : 0;
-            html += `<tr class="journal-row">
-                <td data-label="Data/ID" style="color: #999; font-size: 0.8rem;">#${t.id}<br>${t.data}</td>
-                <td data-label="Conto e Descrizione"><strong>${t.nome}</strong><br><small>${t.cat === 'SP' ? 'Stato Patrimoniale' : 'Conto Economico'}</small><br><small style="opacity:0.7">${t.descrizione}</small></td>
-                <td data-label="Analisi"><span class="badge ${t.tipoVar.toLowerCase()}">${t.tipoVar}</span></td>
-                <td data-label="Dare (€)" class="val" style="color: var(--success);">${dare > 0 ? dare.toLocaleString('it-IT', {minimumFractionDigits: 2}) : ''}</td>
-                <td data-label="Avere (€)" class="val" style="color: var(--danger);">${avere > 0 ? avere.toLocaleString('it-IT', {minimumFractionDigits: 2}) : ''}</td>
-            </tr>`;
-        });
-
-        html += '</tbody></table></div>';
-
-        // Mastrini
-        html += '<div class="panel"><h2>Conti a T (Mastrini)</h2><div class="mastrini-wrapper">';
-
-        for (const [nome, dati] of Object.entries(conti)) {
-            const totDare = dati.dare.reduce((a, b) => a + b, 0);
-            const totAvere = dati.avere.reduce((a, b) => a + b, 0);
-            const saldo = totDare - totAvere;
-
-            html += `<div class="mastrino-t">
-                <div class="t-header">${nome}</div>
-                <div class="t-content">
-                    <div class="t-side"><strong>Dare</strong><br>${dati.dare.map(v => `<div>${v.toFixed(2)}</div>`).join('')}</div>
-                    <div class="t-side" style="text-align: right"><strong>Avere</strong><br>${dati.avere.map(v => `<div>${v.toFixed(2)}</div>`).join('')}</div>
+            <h3>Aggiungi movimento contabile</h3>
+            <div class="grid-form">
+                <div>
+                    <label for="txConto">Conto</label>
+                    <input id="txConto" type="text" placeholder="Es. Merci c/acquisti">
                 </div>
-                <div class="t-footer">Saldo: ${saldo.toFixed(2)} €</div>
-            </div>`;
-        }
+                <div>
+                    <label for="txSezione">Sezione</label>
+                    <select id="txSezione">
+                        <option value="capitalizzazione">Capitalizzazione</option>
+                        <option value="liquidazione">Liquidazione</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="txTipoVar">Analisi</label>
+                    <select id="txTipoVar">
+                        <option value="VFA">VFA</option>
+                        <option value="VFP">VFP</option>
+                        <option value="VEN">VEN</option>
+                        <option value="VEP">VEP</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="txCategoria">Prospetto</label>
+                    <select id="txCategoria">
+                        <option value="SP">SP</option>
+                        <option value="CE">CE</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="txImporto">Importo euro</label>
+                    <input id="txImporto" type="number" min="0" step="0.01" placeholder="0.00">
+                </div>
+                <div>
+                    <label for="txDescrizione">Descrizione</label>
+                    <input id="txDescrizione" type="text" placeholder="Dettaglio movimento">
+                </div>
+                <button onclick="addTransactionToCurrentStep()">Aggiungi movimento</button>
+            </div>
 
-        html += '</div></div>';
+            <div id="txList" class="tx-list"></div>
 
-        // Bilanci
-        html += '<div class="bilancio-grid"><div class="statement"><h3>Conto Economico</h3><table width="100%">';
-        html += '<thead><tr><th>Costi (VEN)</th><th>Ricavi (VEP)</th></tr></thead><tbody>';
+            <div class="builder-actions">
+                <button class="btn-secondary" onclick="saveCurrentStep()">Salva step</button>
+                <button class="btn-example" onclick="loadCasoDeltaExample()">Carica esempio Caso Delta</button>
+                <button onclick="createNewStep()">Nuovo step</button>
+                <button class="btn-danger" onclick="deleteCurrentStep()">Elimina step</button>
+            </div>
+        </div>
 
-        let costi = 0, ricavi = 0;
-        for (const [nome, dati] of Object.entries(conti)) {
-            if (dati.cat === 'CE') {
-                const saldo = dati.dare.reduce((a, b) => a + b, 0) - dati.avere.reduce((a, b) => a + b, 0);
-                if (saldo > 0) {
-                    html += `<tr><td data-label="Costi (VEN)">${nome}: ${saldo.toFixed(2)}</td><td data-label="Ricavi (VEP)"></td></tr>`;
-                    costi += saldo;
-                } else if (saldo < 0) {
-                    html += `<tr><td data-label="Costi (VEN)"></td><td data-label="Ricavi (VEP)">${nome}: ${Math.abs(saldo).toFixed(2)}</td></tr>`;
-                    ricavi += Math.abs(saldo);
-                }
-            }
-        }
-        html += '</tbody></table>';
-        const risultato = ricavi - costi;
-        html += `<div class="total-box" style="background: ${risultato >= 0 ? 'var(--success)' : 'var(--danger)'};"><strong>Risultato: € ${risultato.toFixed(2)}</strong></div></div>`;
+        <div id="stepContent"></div>
 
-        html += '<div class="statement"><h3>Stato Patrimoniale</h3><table width="100%"><thead><tr><th>Attivo (VFA-VFP)</th><th>Passivo (VFP-VFA)</th></tr></thead><tbody>';
-        let attivo = 0, passivo = 0;
-        for (const [nome, dati] of Object.entries(conti)) {
-            if (dati.cat === 'SP') {
-                const saldo = dati.dare.reduce((a, b) => a + b, 0) - dati.avere.reduce((a, b) => a + b, 0);
-                if (saldo > 0) {
-                    html += `<tr><td data-label="Attivo">${nome}: ${saldo.toFixed(2)}</td><td data-label="Passivo"></td></tr>`;
-                    attivo += saldo;
-                } else if (saldo < 0) {
-                    html += `<tr><td data-label="Attivo"></td><td data-label="Passivo">${nome}: ${Math.abs(saldo).toFixed(2)}</td></tr>`;
-                    passivo += Math.abs(saldo);
-                }
-            }
-        }
-        html += `</tbody></table><div class="total-box"><strong>Attivo: € ${attivo.toFixed(2)}</strong></div>`;
-        html += `<div class="total-box" style="background: var(--secondary);"><strong>Passivo: € ${passivo.toFixed(2)}</strong></div></div></div>`;
+        <div class="step-nav">
+            <button class="btn-prev" id="prevBtn" onclick="prevStep()">← Indietro</button>
+            <span id="stepCounter" style="text-align: center; padding: 12px;"></span>
+            <button class="btn-next" id="nextBtn" onclick="nextStep()">Avanti →</button>
+        </div>
+    </div>
 
-        document.getElementById('stepContent').innerHTML = html;
-    }
-
-    function renderProgress() {
-        const progress = document.getElementById('stepProgress');
-        let html = '';
-
-        esercizio.forEach((step, idx) => {
-            const isActive = idx === currentStep;
-            const isCompleted = idx < currentStep;
-            const phaseName = step.fase === 'Capitalizzazione' ? 'K' : 'L';
-
-            html += `<div class="step-dot ${isActive ? 'active' : ''} ${isCompleted ? 'completed' : ''} phase-${phaseName.toLowerCase()}" 
-                        onclick="navigateToStep(${idx})" title="${step.titolo}">
-                        ${idx + 1}
-                    </div>`;
-            
-            if (idx < esercizio.length - 1) {
-                html += `<div class="step-line ${isActive || isCompleted ? 'active' : ''}"></div>`;
-            }
-        });
-
-        progress.innerHTML = html;
-    }
-
-    function updateNavigation() {
-        const prevBtn = document.getElementById('prevBtn');
-        const nextBtn = document.getElementById('nextBtn');
-        const counter = document.getElementById('stepCounter');
-
-        prevBtn.disabled = currentStep === 0;
-        nextBtn.disabled = currentStep === esercizio.length - 1;
-        counter.textContent = `Step ${currentStep + 1} di ${esercizio.length}`;
-
-        prevBtn.textContent = currentStep > 0
-            ? `← ${esercizio[currentStep - 1].titolo.substring(0, 20)}...`
-            : '← Indietro';
-        nextBtn.textContent = currentStep < esercizio.length - 1
-            ? `${esercizio[currentStep + 1].titolo.substring(0, 20)}... →`
-            : 'Avanti →';
-    }
-
-    function nextStep() {
-        syncCurrentStepFromEditor();
-        if (currentStep < esercizio.length - 1) {
-            currentStep++;
-            renderStep();
-            window.scrollTo(0, 0);
-        }
-    }
-
-    function prevStep() {
-        syncCurrentStepFromEditor();
-        if (currentStep > 0) {
-            currentStep--;
-            renderStep();
-            window.scrollTo(0, 0);
-        }
-    }
-
-    function navigateToStep(step) {
-        syncCurrentStepFromEditor();
-        currentStep = step;
-        renderStep();
-        window.scrollTo(0, 0);
-    }
-
-    // Init al caricamento
-    window.addEventListener('load', initStep);
-</script>
-
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+    <script src="app.js" defer></script>
 </body>
 </html>
