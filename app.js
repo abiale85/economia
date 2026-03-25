@@ -907,10 +907,11 @@ function renderStepContent() {
             <h2>Pagina Finale - Bozza Bilancio di Esercizio</h2>
             <div class="builder-actions">
                 <button onclick="generateFinalDraft()">Genera bozza bilancio</button>
+                <button onclick="editBilancioDraft()">Modifica bozza</button>
                 <button class="btn-secondary" onclick="clearSection('bilancio')">Svuota bozza</button>
             </div>
             <p>Bozza di studio: puoi modificarla manualmente prima di copiarla nel compito definitivo.</p>
-            <textarea rows="14" oninput="updateManualSection('bilancio', this.value)">${escapeHtml(step.reportManual.bilancio)}</textarea>
+            ${renderBilancioPreview(step)}
         </div>
         ` : ''}
     `;
@@ -930,6 +931,30 @@ function updateManualSection(section, value) {
     ensureStepStructures(step);
     step.reportManual[section] = value;
     saveToLocalStorage();
+}
+
+function renderBilancioPreview(step) {
+    const text = String(step.reportManual.bilancio || '').trim();
+    if (!text) {
+        return '<div class="step-info">Nessuna bozza presente. Usa "Genera bozza bilancio" oppure "Modifica bozza".</div>';
+    }
+
+    const lines = text
+        .split('\n')
+        .map((line) => `<div>${escapeHtml(line) || '&nbsp;'}</div>`)
+        .join('');
+
+    return `<div class="step-info" style="max-height: 340px; overflow: auto; background: #fff;">${lines}</div>`;
+}
+
+function editBilancioDraft() {
+    const step = esercizio[currentStep];
+    ensureStepStructures(step);
+    const current = step.reportManual.bilancio || '';
+    const updated = prompt('Modifica bozza bilancio (testo completo):', current);
+    if (updated === null) return;
+    step.reportManual.bilancio = updated;
+    renderStep();
 }
 
 function renderGuidedGiornaleTable(step) {
