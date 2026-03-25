@@ -73,14 +73,10 @@ function defaultDataByType(type) {
 function defaultEntryByType(type) {
     if (type === 'analisi') {
         return {
-            eLato: 'E',
-            eDescrizione: '+ Denaro',
-            eVariazione: 'Vf+',
-            eImporto: '',
-            uLato: 'U',
-            uDescrizione: '+ Debiti di finanziamento (v/banche)',
-            uVariazione: 'Vf-',
-            uImporto: ''
+            seE: '',
+            seU: '',
+            sfE: '',
+            sfU: ''
         };
     }
     if (type === 'mastrino') {
@@ -171,34 +167,30 @@ function normalizeItem(item) {
     const base = defaultDataByType(type);
 
     if (type === 'analisi') {
-        const fallbackEntry = {
-            eLato: data.eLato,
-            eDescrizione: data.eDescrizione,
-            eVariazione: data.eVariazione,
-            eImporto: data.eImporto,
-            uLato: data.uLato,
-            uDescrizione: data.uDescrizione,
-            uVariazione: data.uVariazione,
-            uImporto: data.uImporto
-        };
-        const first = data.entries?.[0] || fallbackEntry;
+        const isNewFormat = (e) => 'seE' in e || 'seU' in e || 'sfE' in e || 'sfU' in e;
+        const isOldFormat = (e) => 'eImporto' in e || 'uImporto' in e;
+        
+        const migrateOldEntry = (oldE) => ({
+            seE: oldE.eImporto || '',
+            seU: oldE.uImporto || '',
+            sfE: '',
+            sfU: ''
+        });
+        
         return {
             id: item.id || uid('item'),
             type,
             data: {
                 titolo: data.titolo || base.titolo,
-                sf: data.sf || base.sf,
-                se: data.se || base.se,
-                entries: (data.entries && data.entries.length ? data.entries : [first]).map((e) => ({
-                    eLato: e.eLato || 'E',
-                    eDescrizione: e.eDescrizione || '',
-                    eVariazione: e.eVariazione || '',
-                    eImporto: e.eImporto || '',
-                    uLato: e.uLato || 'U',
-                    uDescrizione: e.uDescrizione || '',
-                    uVariazione: e.uVariazione || '',
-                    uImporto: e.uImporto || ''
-                }))
+                entries: (data.entries && data.entries.length ? data.entries : [defaultEntryByType('analisi')]).map((e) => {
+                    if (isNewFormat(e)) {
+                        return { seE: e.seE || '', seU: e.seU || '', sfE: e.sfE || '', sfU: e.sfU || '' };
+                    }
+                    if (isOldFormat(e)) {
+                        return migrateOldEntry(e);
+                    }
+                    return { seE: '', seU: '', sfE: '', sfU: '' };
+                })
             }
         };
     }
@@ -432,22 +424,23 @@ function renderItemBody(item) {
     if (item.type === 'analisi') {
         const rows = (d.entries || []).map((r, idx) => `
             <div class="schema-box">
-                <div class="schema-grid">
-                    <div class="schema-col">
-                        <div class="schema-letter">${escapeHtml(r.eLato || 'E')}</div>
-                        <div>${escapeHtml(r.eDescrizione || '')}</div>
-                        <div class="chip">${escapeHtml(r.eVariazione || '')}</div>
-                        <div class="schema-money">${escapeHtml(r.eImporto || '-')}</div>
-                    </div>
-                    <div class="schema-arrow">↔</div>
-                    <div class="schema-col">
-                        <div class="schema-letter">${escapeHtml(r.uLato || 'U')}</div>
-                        <div>${escapeHtml(r.uDescrizione || '')}</div>
-                        <div class="chip">${escapeHtml(r.uVariazione || '')}</div>
-                        <div class="schema-money">${escapeHtml(r.uImporto || '-')}</div>
-                    </div>
-                </div>
-                <div class="schema-foot"><div>${escapeHtml(d.sf || 'S.F.')}</div><div>${escapeHtml(d.se || 'S.E.')}</div></div>
+                <table class="analysis-display">
+                    <thead>
+                        <tr><th></th><th>E</th><th>U</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>SE</strong></td>
+                            <td>${escapeHtml(r.seE || '-')}</td>
+                            <td>${escapeHtml(r.seU || '-')}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>SF</strong></td>
+                            <td>${escapeHtml(r.sfE || '-')}</td>
+                            <td>${escapeHtml(r.sfU || '-')}</td>
+                        </tr>
+                    </tbody>
+                </table>
                 ${renderEntryActions(item.id, idx)}
             </div>
         `).join('');
@@ -664,24 +657,30 @@ function buildTypeForm(type, data, mode) {
         return `
             <div class="grid">
                 <div><label>Titolo schema</label><input name="titolo" value="${escapeHtml(data.titolo || '')}"></div>
-                <div><label>Etichetta finale 1</label><input name="sf" value="${escapeHtml(data.sf)}"></div>
-                <div><label>Etichetta finale 2</label><input name="se" value="${escapeHtml(data.se)}"></div>
+                <div><label>Struttura finale</label><input value="S.F. (sopra) e S.E. (sotto), fisse" readonly></div>
             </div>
         `;
     }
 
     if (type === 'analisi' && entryOnly) {
         return `
-            <div class="grid">
-                <div><label>Lato sinistra</label><input name="eLato" value="${escapeHtml(data.eLato || 'E')}"></div>
-                <div><label>Descrizione sinistra</label><input name="eDescrizione" value="${escapeHtml(data.eDescrizione || '')}"></div>
-                <div><label>Variazione sinistra</label><input name="eVariazione" value="${escapeHtml(data.eVariazione || 'Vf+')}"></div>
-                <div><label>Importo sinistra</label><input name="eImporto" value="${escapeHtml(data.eImporto || '')}" placeholder="150.000EUR"></div>
-                <div><label>Lato destra</label><input name="uLato" value="${escapeHtml(data.uLato || 'U')}"></div>
-                <div><label>Descrizione destra</label><input name="uDescrizione" value="${escapeHtml(data.uDescrizione || '')}"></div>
-                <div><label>Variazione destra</label><input name="uVariazione" value="${escapeHtml(data.uVariazione || 'Vf-')}"></div>
-                <div><label>Importo destra</label><input name="uImporto" value="${escapeHtml(data.uImporto || '')}" placeholder="150.000EUR"></div>
-            </div>
+            <table class="analysis-matrix">
+                <thead>
+                    <tr><th></th><th>E</th><th>U</th></tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>SE</strong></td>
+                        <td><input name="seE" value="${escapeHtml(data.seE || '')}" placeholder="importo"></td>
+                        <td><input name="seU" value="${escapeHtml(data.seU || '')}" placeholder="importo"></td>
+                    </tr>
+                    <tr>
+                        <td><strong>SF</strong></td>
+                        <td><input name="sfE" value="${escapeHtml(data.sfE || '')}" placeholder="importo"></td>
+                        <td><input name="sfU" value="${escapeHtml(data.sfU || '')}" placeholder="importo"></td>
+                    </tr>
+                </tbody>
+            </table>
         `;
     }
 
@@ -819,7 +818,7 @@ function collectFormData(type) {
 function saveItemFromModal() {
     const page = getCurrentPage();
     const data = collectFormData(editorState.type);
-    let touchedMastrino = null;
+    let touchedAnalysis = null;
 
     if (editorState.mode === 'create') {
         const newItem = {
@@ -828,29 +827,29 @@ function saveItemFromModal() {
             data: buildInitialData(editorState.type, data)
         };
         page.items.push(newItem);
-        if (newItem.type === 'mastrino') touchedMastrino = newItem;
+        if (newItem.type === 'analisi') touchedAnalysis = newItem;
     } else if (editorState.mode === 'edit-item') {
         const target = page.items.find((x) => x.id === editorState.itemId);
         if (!target) return;
         updateItemMeta(target, data);
-        if (target.type === 'mastrino') touchedMastrino = target;
+        if (target.type === 'analisi') touchedAnalysis = target;
     } else if (editorState.mode === 'add-entry') {
         const target = page.items.find((x) => x.id === editorState.itemId);
         if (!target) return;
         target.data.entries.push(buildEntryFromForm(target.type, data));
-        if (target.type === 'mastrino') touchedMastrino = target;
+        if (target.type === 'analisi') touchedAnalysis = target;
     } else if (editorState.mode === 'edit-entry') {
         const target = page.items.find((x) => x.id === editorState.itemId);
         if (!target) return;
         const idx = editorState.entryIndex;
         if (idx === null || !target.data.entries[idx]) return;
         target.data.entries[idx] = buildEntryFromForm(target.type, data);
-        if (target.type === 'mastrino') touchedMastrino = target;
+        if (target.type === 'analisi') touchedAnalysis = target;
     }
 
     recalcDerivedFields(page);
-    if (touchedMastrino) {
-        syncBooksFromMastrino(page, touchedMastrino);
+    if (touchedAnalysis) {
+        syncBooksFromAnalysis(page, touchedAnalysis);
     }
     saveState();
     closeItemEditor();
@@ -978,8 +977,8 @@ function deleteItem(itemId) {
     const ok = confirm('Eliminare questo oggetto?');
     if (!ok) return;
     page.items = page.items.filter((x) => x.id !== itemId);
-    if (target?.type === 'mastrino') {
-        removeAutoRefsForMastrino(page, target.id);
+    if (target?.type === 'analisi') {
+        removeAutoRefsForSource(page, target.id);
     }
     saveState();
     renderAll();
@@ -1013,7 +1012,6 @@ function addSideMastrino(itemId) {
     };
 
     page.items.splice(idx + 1, 0, newItem);
-    syncBooksFromMastrino(page, newItem);
     saveState();
     renderAll();
 }
@@ -1025,7 +1023,9 @@ function moveEntry(itemId, entryIndex, dir) {
     moveInArray(item.data.entries, entryIndex, entryIndex + dir);
     if (item.type === 'mastrino') {
         recalcDerivedFields(page);
-        syncBooksFromMastrino(page, item);
+    }
+    if (item.type === 'analisi') {
+        syncBooksFromAnalysis(page, item);
     }
     saveState();
     renderAll();
@@ -1044,7 +1044,9 @@ function deleteEntry(itemId, entryIndex) {
     item.data.entries.splice(entryIndex, 1);
     if (item.type === 'mastrino') {
         recalcDerivedFields(page);
-        syncBooksFromMastrino(page, item);
+    }
+    if (item.type === 'analisi') {
+        syncBooksFromAnalysis(page, item);
     }
     saveState();
     renderAll();
@@ -1070,86 +1072,124 @@ function getOrCreateBook(page, type, createData, predicate) {
     return item;
 }
 
-function removeAutoRefsForMastrino(page, mastrinoId) {
+function removeAutoRefsForSource(page, sourceId) {
     page.items.forEach((item) => {
-        if (item.type === 'giornale') {
-            item.data.entries = (item.data.entries || []).filter((e) => e.autoRef !== mastrinoId);
-        }
-        if (item.type === 'mastro') {
-            item.data.entries = (item.data.entries || []).filter((e) => e.autoRef !== mastrinoId);
+        if (item.type === 'mastrino' || item.type === 'giornale' || item.type === 'mastro') {
+            item.data.entries = (item.data.entries || []).filter((e) => e.autoRef !== sourceId);
         }
         if (item.type === 'bilancio') {
-            item.data.ceEntries = (item.data.ceEntries || []).filter((e) => e.autoRef !== mastrinoId);
-            item.data.spEntries = (item.data.spEntries || []).filter((e) => e.autoRef !== mastrinoId);
+            item.data.ceEntries = (item.data.ceEntries || []).filter((e) => e.autoRef !== sourceId);
+            item.data.spEntries = (item.data.spEntries || []).filter((e) => e.autoRef !== sourceId);
         }
     });
 }
 
-function classifyForCeSp(conto, saldo) {
-    const name = String(conto || '').toLowerCase();
-    const absSaldo = Math.abs(saldo).toFixed(2);
-    if (/ricav|vendit|provent/.test(name)) {
-        return { area: 'CE', tipo: 'Ricavo', importo: absSaldo };
-    }
-    if (/costo|spes|ammort|salari|stipend|interess/.test(name)) {
-        return { area: 'CE', tipo: 'Costo', importo: absSaldo };
-    }
-    return { area: 'SP', tipo: saldo >= 0 ? 'Attivo' : 'Passivo', importo: absSaldo };
+function parseAmount(value) {
+    if (value === null || value === undefined) return 0;
+    const normalized = String(value).replace(/\./g, '').replace(',', '.').replace(/[^0-9.-]/g, '').trim();
+    const n = Number(normalized);
+    return Number.isFinite(n) ? n : 0;
 }
 
-function syncBooksFromMastrino(page, mastrinoItem) {
+function normalizeVarCode(value, fallbackSign) {
+    const txt = String(value || '').toUpperCase();
+    if (/VFA/.test(txt)) return 'VFA';
+    if (/VFP/.test(txt)) return 'VFP';
+    if (/VEN/.test(txt)) return 'VEN';
+    if (/VEP/.test(txt)) return 'VEP';
+    if (fallbackSign === '+') return 'VFA';
+    if (fallbackSign === '-') return 'VFP';
+    return 'VFA';
+}
+
+function varCodeToDareAvere(code, importo) {
+    const imp = Number(importo || 0);
+    if (!Number.isFinite(imp) || imp <= 0) return { dare: 0, avere: 0 };
+    if (code === 'VFA' || code === 'VEN') return { dare: imp, avere: 0 };
+    return { dare: 0, avere: imp };
+}
+
+function classifyForCeSp(conto, code, dare, avere) {
+    if (code === 'VEN') return { area: 'CE', tipo: 'Costo', importo: Number(dare || 0).toFixed(2) };
+    if (code === 'VEP') return { area: 'CE', tipo: 'Ricavo', importo: Number(avere || 0).toFixed(2) };
+    return { area: 'SP', tipo: code === 'VFP' ? 'Passivo' : 'Attivo', importo: Number(dare || avere || 0).toFixed(2) };
+}
+
+function extractMovementsFromAnalysis(analysisItem) {
+    const out = [];
+    const rows = analysisItem.data?.entries || [];
+
+    rows.forEach((r) => {
+        // SE-E movement
+        if (r.seE && Number(r.seE) !== 0) {
+            out.push({
+                conto: 'Attivo/SE-E',
+                code: 'VFA',
+                amount: Math.abs(Number(r.seE)),
+                descrizione: `Analisi SE (E side): ${r.seE}`,
+                side: 'SE-E',
+                sign: Number(r.seE) > 0 ? '+' : '-'
+            });
+        }
+        // SE-U movement
+        if (r.seU && Number(r.seU) !== 0) {
+            out.push({
+                conto: 'Passivo/SE-U',
+                code: 'VFP',
+                amount: Math.abs(Number(r.seU)),
+                descrizione: `Analisi SE (U side): ${r.seU}`,
+                side: 'SE-U',
+                sign: Number(r.seU) > 0 ? '+' : '-'
+            });
+        }
+        // SF-E movement
+        if (r.sfE && Number(r.sfE) !== 0) {
+            out.push({
+                conto: 'Ricavo/SF-E',
+                code: 'VEP',
+                amount: Math.abs(Number(r.sfE)),
+                descrizione: `Analisi SF (E side): ${r.sfE}`,
+                side: 'SF-E',
+                sign: Number(r.sfE) > 0 ? '+' : '-'
+            });
+        }
+        // SF-U movement
+        if (r.sfU && Number(r.sfU) !== 0) {
+            out.push({
+                conto: 'Costo/SF-U',
+                code: 'VEN',
+                amount: Math.abs(Number(r.sfU)),
+                descrizione: `Analisi SF (U side): ${r.sfU}`,
+                side: 'SF-U',
+                sign: Number(r.sfU) > 0 ? '+' : '-'
+            });
+        }
+    });
+
+    return out.filter((m) => m.conto);
+}
+
+function syncBooksFromAnalysis(page, analysisItem) {
     const settings = getSettings();
     if (!settings.autoAddBooks && !settings.autoUpdateBooks) return;
 
-    const mastrinoId = mastrinoItem.id;
-    const conto = mastrinoItem.data?.conto || 'Conto';
-    const entries = mastrinoItem.data?.entries || [];
-    const totalDare = entries.reduce((s, e) => s + Number(e.dare || 0), 0);
-    const totalAvere = entries.reduce((s, e) => s + Number(e.avere || 0), 0);
-    const saldo = totalDare - totalAvere;
+    const sourceId = analysisItem.id;
+    const movements = extractMovementsFromAnalysis(analysisItem);
+
+    removeAutoRefsForSource(page, sourceId);
+
+    const shouldCreateOrUpdate = settings.autoAddBooks || settings.autoUpdateBooks;
+    if (!shouldCreateOrUpdate || !movements.length) {
+        recalcDerivedFields(page);
+        return;
+    }
 
     const giornale = getOrCreateBook(
         page,
         'giornale',
-        () => ({ titolo: 'Libro Giornale (auto)', entries: [] }),
+        () => ({ titolo: 'Libro Giornale (auto da Analisi)', entries: [] }),
         (x) => x.data?.autoManaged || !settings.autoAddBooks
     );
-    if (giornale && (settings.autoUpdateBooks || settings.autoAddBooks)) {
-        giornale.data.entries = (giornale.data.entries || []).filter((e) => e.autoRef !== mastrinoId);
-        entries.forEach((e) => {
-            const dare = Number(e.dare || 0);
-            const avere = Number(e.avere || 0);
-            if (dare === 0 && avere === 0) return;
-            giornale.data.entries.push({
-                data: e.data || new Date().toLocaleDateString('it-IT'),
-                conto,
-                analisi: dare > 0 && avere === 0 ? 'VFA' : (avere > 0 && dare === 0 ? 'VFP' : 'MIX'),
-                dare: dare ? dare.toFixed(2) : '',
-                avere: avere ? avere.toFixed(2) : '',
-                descrizione: `[AUTO da mastrino] ${e.descrizione || ''}`.trim(),
-                autoRef: mastrinoId
-            });
-        });
-    }
-
-    const mastro = getOrCreateBook(
-        page,
-        'mastro',
-        () => ({ conto, entries: [] }),
-        (x) => (x.data?.conto || '').toLowerCase() === String(conto).toLowerCase() || x.data?.autoManaged
-    );
-    if (mastro && (settings.autoUpdateBooks || settings.autoAddBooks)) {
-        mastro.data.conto = mastro.data.conto || conto;
-        mastro.data.entries = (mastro.data.entries || []).filter((e) => e.autoRef !== mastrinoId);
-        mastro.data.entries.push({
-            data: new Date().toLocaleDateString('it-IT'),
-            descrizione: '[AUTO da mastrino]',
-            totaleDare: totalDare.toFixed(2),
-            totaleAvere: totalAvere.toFixed(2),
-            saldo: saldo.toFixed(2),
-            autoRef: mastrinoId
-        });
-    }
 
     const bilancio = getOrCreateBook(
         page,
@@ -1157,24 +1197,75 @@ function syncBooksFromMastrino(page, mastrinoItem) {
         () => ({ titolo: 'Conto Economico e Stato Patrimoniale (auto)', ceEntries: [], spEntries: [] }),
         (x) => x.data?.autoManaged || !settings.autoAddBooks
     );
-    if (bilancio && (settings.autoUpdateBooks || settings.autoAddBooks)) {
-        bilancio.data.ceEntries = (bilancio.data.ceEntries || []).filter((e) => e.autoRef !== mastrinoId);
-        bilancio.data.spEntries = (bilancio.data.spEntries || []).filter((e) => e.autoRef !== mastrinoId);
 
-        if (Math.abs(saldo) >= 0.0001) {
-            const cls = classifyForCeSp(conto, saldo);
-            const row = { tipo: cls.tipo, conto, importo: cls.importo, autoRef: mastrinoId };
+    movements.forEach((m) => {
+        const { dare, avere } = varCodeToDareAvere(m.code, m.amount);
+
+        const mastrino = getOrCreateBook(
+            page,
+            'mastrino',
+            () => ({ conto: m.conto, stato: 'APERTO', entries: [] }),
+            (x) => (x.data?.conto || '').toLowerCase() === m.conto.toLowerCase() || x.data?.autoManaged
+        );
+
+        if (mastrino) {
+            mastrino.data.conto = mastrino.data.conto || m.conto;
+            mastrino.data.entries.push({
+                data: new Date().toLocaleDateString('it-IT'),
+                descrizione: `[AUTO da Analisi] ${m.descrizione}`.trim(),
+                dare: dare ? dare.toFixed(2) : '',
+                avere: avere ? avere.toFixed(2) : '',
+                autoRef: sourceId
+            });
+        }
+
+        const mastro = getOrCreateBook(
+            page,
+            'mastro',
+            () => ({ conto: m.conto, entries: [] }),
+            (x) => (x.data?.conto || '').toLowerCase() === m.conto.toLowerCase() || x.data?.autoManaged
+        );
+
+        if (mastro) {
+            mastro.data.conto = mastro.data.conto || m.conto;
+            mastro.data.entries.push({
+                data: new Date().toLocaleDateString('it-IT'),
+                descrizione: '[AUTO da Analisi]',
+                totaleDare: dare ? dare.toFixed(2) : '0.00',
+                totaleAvere: avere ? avere.toFixed(2) : '0.00',
+                saldo: (dare - avere).toFixed(2),
+                autoRef: sourceId
+            });
+        }
+
+        if (giornale) {
+            giornale.data.entries.push({
+                data: new Date().toLocaleDateString('it-IT'),
+                conto: m.conto,
+                analisi: m.code,
+                dare: dare ? dare.toFixed(2) : '',
+                avere: avere ? avere.toFixed(2) : '',
+                descrizione: `[AUTO da Analisi] ${m.descrizione}`.trim(),
+                autoRef: sourceId
+            });
+        }
+
+        if (bilancio) {
+            const cls = classifyForCeSp(m.conto, m.code, dare, avere);
+            const row = { tipo: cls.tipo, conto: m.conto, importo: cls.importo, autoRef: sourceId };
             if (cls.area === 'CE') bilancio.data.ceEntries.push(row);
             if (cls.area === 'SP') bilancio.data.spEntries.push(row);
         }
-    }
+    });
+
+    recalcDerivedFields(page);
 }
 
-function syncAllMastrini() {
+function syncAllAnalisi() {
     state.pages.forEach((page) => {
         page.items
-            .filter((item) => item.type === 'mastrino')
-            .forEach((mastrino) => syncBooksFromMastrino(page, mastrino));
+            .filter((item) => item.type === 'analisi')
+            .forEach((analysis) => syncBooksFromAnalysis(page, analysis));
     });
 }
 
@@ -1244,7 +1335,7 @@ function bindEvents() {
         autoAdd.addEventListener('change', () => {
             state.settings.autoAddBooks = autoAdd.checked;
             if (state.settings.autoAddBooks || state.settings.autoUpdateBooks) {
-                syncAllMastrini();
+                syncAllAnalisi();
             }
             saveState();
             renderAll();
@@ -1253,7 +1344,7 @@ function bindEvents() {
         autoUpdate.addEventListener('change', () => {
             state.settings.autoUpdateBooks = autoUpdate.checked;
             if (state.settings.autoAddBooks || state.settings.autoUpdateBooks) {
-                syncAllMastrini();
+                syncAllAnalisi();
             }
             saveState();
             renderAll();
