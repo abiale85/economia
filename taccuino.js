@@ -4,8 +4,7 @@ let state = {
     currentPageId: null,
     pages: [],
     settings: {
-        autoAddBooks: false,
-        autoUpdateBooks: false,
+        autoSyncAnalysis: false,
         editMode: false
     }
 };
@@ -142,11 +141,16 @@ function loadState() {
 }
 
 function normalizeState(raw) {
+    const migratedAutoSync = Boolean(
+        raw?.settings?.autoSyncAnalysis ||
+        raw?.settings?.autoAddBooks ||
+        raw?.settings?.autoUpdateBooks
+    );
+
     const normalized = {
         currentPageId: raw.currentPageId,
         settings: {
-            autoAddBooks: Boolean(raw?.settings?.autoAddBooks),
-            autoUpdateBooks: Boolean(raw?.settings?.autoUpdateBooks),
+            autoSyncAnalysis: migratedAutoSync,
             editMode: Boolean(raw?.settings?.editMode)
         },
         pages: (raw.pages || []).map((p) => ({
@@ -1016,8 +1020,7 @@ function deleteEntry(itemId, entryIndex) {
 
 function getSettings() {
     return {
-        autoAddBooks: Boolean(state?.settings?.autoAddBooks),
-        autoUpdateBooks: Boolean(state?.settings?.autoUpdateBooks),
+        autoSyncAnalysis: Boolean(state?.settings?.autoSyncAnalysis),
         editMode: Boolean(state?.settings?.editMode)
     };
 }
@@ -1026,7 +1029,7 @@ function getOrCreateBook(page, type, createData, predicate) {
     const settings = getSettings();
     const matches = page.items.filter((x) => x.type === type && (!predicate || predicate(x)));
     if (matches.length) return matches[0];
-    if (!settings.autoAddBooks) return null;
+    if (!settings.autoSyncAnalysis) return null;
 
     const data = createData();
     const item = { id: uid('item'), type, data: { ...data, autoManaged: true } };
@@ -1100,15 +1103,14 @@ function applyStaticAutoSectionOrder(page) {
 
 function syncBooksFromAnalysis(page, analysisItem) {
     const settings = getSettings();
-    if (!settings.autoAddBooks && !settings.autoUpdateBooks) return;
+    if (!settings.autoSyncAnalysis) return;
 
     const sourceId = analysisItem.id;
     const movements = extractMovementsFromAnalysis(analysisItem);
 
     removeAutoRefsForSource(page, sourceId);
 
-    const shouldCreateOrUpdate = settings.autoAddBooks || settings.autoUpdateBooks;
-    if (!shouldCreateOrUpdate || !movements.length) {
+    if (!movements.length) {
         recalcDerivedFields(page);
         return;
     }
@@ -1117,14 +1119,14 @@ function syncBooksFromAnalysis(page, analysisItem) {
         page,
         'giornale',
         () => ({ titolo: 'Libro Giornale (auto da Analisi)', entries: [] }),
-        (x) => x.data?.autoManaged || !settings.autoAddBooks
+        (x) => x.data?.autoManaged
     );
 
     const bilancio = getOrCreateBook(
         page,
         'bilancio',
         () => ({ titolo: 'Conto Economico e Stato Patrimoniale (auto)', ceEntries: [], spEntries: [] }),
-        (x) => x.data?.autoManaged || !settings.autoAddBooks
+        (x) => x.data?.autoManaged
     );
 
     movements.forEach((m) => {
@@ -1247,11 +1249,9 @@ function bindEvents() {
         openItemEditor('create', type);
     });
 
-    const autoAdd = document.getElementById('autoAddBooks');
-    const autoUpdate = document.getElementById('autoUpdateBooks');
-    if (autoAdd && autoUpdate) {
-        autoAdd.checked = getSettings().autoAddBooks;
-        autoUpdate.checked = getSettings().autoUpdateBooks;
+    const autoSync = document.getElementById('autoSyncAnalysis');
+    if (autoSync) {
+        autoSync.checked = getSettings().autoSyncAnalysis;
         const editModeInput = document.getElementById('editMode');
         if (editModeInput) {
             editModeInput.checked = getSettings().editMode;
@@ -1262,18 +1262,9 @@ function bindEvents() {
             });
         }
 
-        autoAdd.addEventListener('change', () => {
-            state.settings.autoAddBooks = autoAdd.checked;
-            if (state.settings.autoAddBooks || state.settings.autoUpdateBooks) {
-                syncAllAnalisi();
-            }
-            saveState();
-            renderAll();
-        });
-
-        autoUpdate.addEventListener('change', () => {
-            state.settings.autoUpdateBooks = autoUpdate.checked;
-            if (state.settings.autoAddBooks || state.settings.autoUpdateBooks) {
+        autoSync.addEventListener('change', () => {
+            state.settings.autoSyncAnalysis = autoSync.checked;
+            if (state.settings.autoSyncAnalysis) {
                 syncAllAnalisi();
             }
             saveState();
