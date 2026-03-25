@@ -77,6 +77,18 @@
         .step-info.fase-liquidazione { border-left-color: #e74c3c; }
         .step-info.fase-capitalizzazione { border-left-color: #3498db; }
 
+        .builder-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+        .builder-grid .full { grid-column: 1 / -1; }
+        .builder-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+        .builder-actions button { padding: 8px 12px; }
+        .tx-list { margin-top: 10px; border: 1px solid #e6e6e6; border-radius: 8px; overflow: hidden; }
+        .tx-item { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; padding: 8px 10px; border-bottom: 1px solid #f0f0f0; font-size: 0.85rem; }
+        .tx-item:last-child { border-bottom: none; }
+        .tx-empty { padding: 10px; font-size: 0.85rem; color: #6b7280; }
+        .btn-secondary { background: #95a5a6; }
+        .btn-danger { background: #e74c3c; }
+        textarea { width: 100%; border: 1px solid #ddd; border-radius: 6px; padding: 10px; font-size: 14px; resize: vertical; min-height: 80px; }
+
         /* ========== TABLET (768px - 1024px) ========== */
         @media (max-width: 1024px) {
             body { padding: 12px; }
@@ -107,6 +119,7 @@
             h3 { font-size: 0.9rem; margin: 8px 0 10px 0; }
             
             .grid-form { grid-template-columns: 1fr; gap: 8px; }
+            .builder-grid { grid-template-columns: 1fr; }
             input, select, button { font-size: 12px; padding: 8px; width: 100%; }
             button { padding: 10px; }
             
@@ -293,6 +306,68 @@
     <!-- Info Fase Corrente -->
     <div id="stepInfo" class="step-info" style="display: none;"></div>
 
+    <div class="panel">
+        <h2>Editor Esercizio Multi-Step</h2>
+        <div class="builder-grid">
+            <div>
+                <label for="editorTitle">Titolo step</label>
+                <input id="editorTitle" type="text" placeholder="Es. Acquisto merci a credito">
+            </div>
+            <div>
+                <label for="editorPhase">Fase</label>
+                <select id="editorPhase">
+                    <option value="Capitalizzazione">Capitalizzazione</option>
+                    <option value="Liquidazione">Liquidazione</option>
+                </select>
+            </div>
+            <div class="full">
+                <label for="editorDescription">Testo dello step</label>
+                <textarea id="editorDescription" placeholder="Scrivi il testo che vuoi analizzare in questo step"></textarea>
+            </div>
+        </div>
+
+        <h3>Aggiungi movimento contabile</h3>
+        <div class="grid-form">
+            <div>
+                <label for="txConto">Conto</label>
+                <input id="txConto" type="text" placeholder="Es. Merci c/acquisti">
+            </div>
+            <div>
+                <label for="txTipoVar">Analisi</label>
+                <select id="txTipoVar">
+                    <option value="VFA">VFA</option>
+                    <option value="VFP">VFP</option>
+                    <option value="VEN">VEN</option>
+                    <option value="VEP">VEP</option>
+                </select>
+            </div>
+            <div>
+                <label for="txCategoria">Prospetto</label>
+                <select id="txCategoria">
+                    <option value="SP">SP</option>
+                    <option value="CE">CE</option>
+                </select>
+            </div>
+            <div>
+                <label for="txImporto">Importo €</label>
+                <input id="txImporto" type="number" min="0" step="0.01" placeholder="0.00">
+            </div>
+            <div>
+                <label for="txDescrizione">Descrizione</label>
+                <input id="txDescrizione" type="text" placeholder="Dettaglio movimento">
+            </div>
+            <button onclick="addTransactionToCurrentStep()">Aggiungi movimento</button>
+        </div>
+
+        <div id="txList" class="tx-list"></div>
+
+        <div class="builder-actions">
+            <button class="btn-secondary" onclick="saveCurrentStep()">Salva step</button>
+            <button onclick="createNewStep()">Nuovo step</button>
+            <button class="btn-danger" onclick="deleteCurrentStep()">Elimina step</button>
+        </div>
+    </div>
+
     <!-- Contenuto dello Step -->
     <div id="stepContent"></div>
 
@@ -309,116 +384,112 @@
     let transazioni = [];
     let conti = {};
     let contiRiferimento = {};
+    let esercizio = [];
+    const STORAGE_KEY = 'accountingLab.esercizio.v1';
+    let autosaveBound = false;
 
-    // Definizione dei step dell'esercizio
-    const esercizio = [
-        {
-            id: 0,
-            titolo: "Apertura della Società - Costituzione del Capitale",
-            fase: "Capitalizzazione",
-            faseClass: "fase-capitalizzazione",
-            descrizione: "La società TechStart S.r.l. è costituita con capitale sociale di €50.000 versato in banca.",
-            transazioni: [
-                { conto: "Banca c/c", tipoVar: "VFA", importo: 50000, categoria: "SP", descrizione: "Versamento capitale" }
-            ]
-        },
-        {
-            id: 1,
-            titolo: "Acquisto Impianti e Attrezzature",
-            fase: "Capitalizzazione",
-            faseClass: "fase-capitalizzazione",
-            descrizione: "Acquisto di impianti produttivi per €20.000 pagati tramite banca. Gli impianti sono ammortizzabili.",
-            transazioni: [
-                { conto: "Impianti e Macchinari", tipoVar: "VFA", importo: 20000, categoria: "SP", descrizione: "Acquisto impianti" },
-                { conto: "Banca c/c", tipoVar: "VFP", importo: 20000, categoria: "SP", descrizione: "Pagamento impianti" }
-            ]
-        },
-        {
-            id: 2,
-            titolo: "Rimanenze Iniziali di Materie Prime",
-            fase: "Capitalizzazione",
-            faseClass: "fase-capitalizzazione",
-            descrizione: "Acquisto di materie prime per €5.000 a credito dai fornitori.",
-            transazioni: [
-                { conto: "Rimanenze di materie prime", tipoVar: "VFA", importo: 5000, categoria: "SP", descrizione: "Acquisto materie prime" },
-                { conto: "Fornitori", tipoVar: "VFP", importo: 5000, categoria: "SP", descrizione: "Debito verso fornitori" }
-            ]
-        },
-        {
-            id: 3,
-            titolo: "Vendite Realizzate Durante l'Esercizio",
-            fase: "Liquidazione",
-            faseClass: "fase-liquidazione",
-            descrizione: "Vendita di prodotti finiti per €60.000, di cui €50.000 in contanti e €10.000 a credito.",
-            transazioni: [
-                { conto: "Banca c/c", tipoVar: "VFA", importo: 50000, categoria: "SP", descrizione: "Incasso vendite" },
-                { conto: "Clienti", tipoVar: "VFA", importo: 10000, categoria: "SP", descrizione: "Crediti verso clienti" },
-                { conto: "Ricavi di vendita", tipoVar: "VEP", importo: 60000, categoria: "CE", descrizione: "Ricavi realizzati" }
-            ]
-        },
-        {
-            id: 4,
-            titolo: "Costi di Produzione e Margine Lordo",
-            fase: "Liquidazione",
-            faseClass: "fase-liquidazione",
-            descrizione: "Consumo di materie prime per €3.000. Il costo del venduto è determinato dal consumo delle rimanenze.",
-            transazioni: [
-                { conto: "Costo del venduto", tipoVar: "VEN", importo: 3000, categoria: "CE", descrizione: "Costo materie consumate" },
-                { conto: "Rimanenze di materie prime", tipoVar: "VFP", importo: 3000, categoria: "SP", descrizione: "Consumo rimanenze" }
-            ]
-        },
-        {
-            id: 5,
-            titolo: "Ammortamenti dell'Esercizio",
-            fase: "Liquidazione",
-            faseClass: "fase-liquidazione",
-            descrizione: "Ammortamento degli impianti calcolato al 10% annuo. Quota ammortamento: €2.000.",
-            transazioni: [
-                { conto: "Ammortamenti", tipoVar: "VEN", importo: 2000, categoria: "CE", descrizione: "Ammortamento impianti (10%)" },
-                { conto: "Fondo ammortamento impianti", tipoVar: "VFP", importo: 2000, categoria: "SP", descrizione: "Fondo ammortamento" }
-            ]
-        },
-        {
-            id: 6,
-            titolo: "Pagamento Fornitori",
-            fase: "Liquidazione",
-            faseClass: "fase-liquidazione",
-            descrizione: "Versamento a favore dei fornitori di €5.000 per estinguere completamente il debito.",
-            transazioni: [
-                { conto: "Fornitori", tipoVar: "VFA", importo: 5000, categoria: "SP", descrizione: "Pagamento fornitori" },
-                { conto: "Banca c/c", tipoVar: "VFP", importo: 5000, categoria: "SP", descrizione: "Pagamento in banca" }
-            ]
-        },
-        {
-            id: 7,
-            titolo: "Incasso dai Clienti",
-            fase: "Liquidazione",
-            faseClass: "fase-liquidazione",
-            descrizione: "Incasso dei €10.000 di crediti verso i clienti.",
-            transazioni: [
-                { conto: "Banca c/c", tipoVar: "VFA", importo: 10000, categoria: "SP", descrizione: "Incasso crediti" },
-                { conto: "Clienti", tipoVar: "VFP", importo: 10000, categoria: "SP", descrizione: "Estinzione crediti" }
-            ]
-        },
-        {
-            id: 8,
-            titolo: "Bilancio di Verifica - Stato Patrimoniale e Conto Economico",
-            fase: "Liquidazione",
-            faseClass: "fase-liquidazione",
-            descrizione: "Visione finale dei bilanci: lo Stato Patrimoniale mostra l'attivo (liquidità, impianti netti) e il passivo (capitale + utile).",
+    function phaseClass(fase) {
+        return fase === 'Liquidazione' ? 'fase-liquidazione' : 'fase-capitalizzazione';
+    }
+
+    function nuovoStep() {
+        return {
+            id: Date.now() + Math.random(),
+            titolo: 'Nuovo step',
+            fase: 'Capitalizzazione',
+            faseClass: phaseClass('Capitalizzazione'),
+            descrizione: '',
             transazioni: []
+        };
+    }
+
+    function saveToLocalStorage() {
+        const payload = {
+            version: 1,
+            currentStep,
+            esercizio
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+    }
+
+    function loadFromLocalStorage() {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return false;
+
+        try {
+            const data = JSON.parse(raw);
+            if (!data || !Array.isArray(data.esercizio) || data.esercizio.length === 0) {
+                return false;
+            }
+
+            esercizio = data.esercizio.map((step) => {
+                const fallback = nuovoStep();
+                const fase = step && step.fase === 'Liquidazione' ? 'Liquidazione' : 'Capitalizzazione';
+                return {
+                    ...fallback,
+                    ...step,
+                    fase,
+                    faseClass: phaseClass(fase),
+                    transazioni: Array.isArray(step?.transazioni) ? step.transazioni : []
+                };
+            });
+
+            const savedStep = Number.isInteger(data.currentStep) ? data.currentStep : 0;
+            currentStep = Math.max(0, Math.min(savedStep, esercizio.length - 1));
+            return true;
+        } catch (error) {
+            console.warn('LocalStorage non valido, inizializzo nuovo esercizio.', error);
+            return false;
         }
-    ];
+    }
+
+    function syncCurrentStepFromEditor() {
+        if (!esercizio.length) return;
+        const step = esercizio[currentStep];
+        step.titolo = document.getElementById('editorTitle').value.trim() || 'Step senza titolo';
+        step.fase = document.getElementById('editorPhase').value;
+        step.faseClass = phaseClass(step.fase);
+        step.descrizione = document.getElementById('editorDescription').value.trim();
+    }
+
+    function autosaveEditorDraft() {
+        syncCurrentStepFromEditor();
+        saveToLocalStorage();
+    }
+
+    function setupAutosaveListeners() {
+        if (autosaveBound) return;
+
+        document.getElementById('editorTitle').addEventListener('input', autosaveEditorDraft);
+        document.getElementById('editorDescription').addEventListener('input', autosaveEditorDraft);
+        document.getElementById('editorPhase').addEventListener('change', autosaveEditorDraft);
+        window.addEventListener('beforeunload', saveToLocalStorage);
+
+        autosaveBound = true;
+    }
 
     function initStep() {
         currentStep = 0;
         transazioni = [];
         conti = {};
         contiRiferimento = {};
+        if (!loadFromLocalStorage()) {
+            esercizio = [nuovoStep()];
+        }
+        setupAutosaveListeners();
         renderStep();
     }
 
     function renderStep() {
+        if (!esercizio.length) {
+            esercizio.push(nuovoStep());
+            currentStep = 0;
+        }
+
+        if (currentStep >= esercizio.length) {
+            currentStep = esercizio.length - 1;
+        }
+
         const step = esercizio[currentStep];
         
         // Aggiorna header
@@ -432,7 +503,7 @@
         const stepInfo = document.getElementById('stepInfo');
         stepInfo.innerHTML = `
             <strong>🎯 Obiettivo di questo step:</strong><br>
-            ${step.descrizione}
+            ${step.descrizione || 'Scrivi il testo del tuo step nell\'editor qui sotto, poi aggiungi i movimenti contabili.'}
         `;
         stepInfo.className = `step-info ${step.faseClass}`;
 
@@ -467,9 +538,97 @@
         }
 
         // Renderizza contenuto step
+        populateEditor(step);
+        renderEditorTransactions(step);
         renderStepContent();
         renderProgress();
         updateNavigation();
+        saveToLocalStorage();
+    }
+
+    function populateEditor(step) {
+        document.getElementById('editorTitle').value = step.titolo;
+        document.getElementById('editorPhase').value = step.fase;
+        document.getElementById('editorDescription').value = step.descrizione;
+    }
+
+    function saveCurrentStep() {
+        syncCurrentStepFromEditor();
+        renderStep();
+    }
+
+    function addTransactionToCurrentStep() {
+        const conto = document.getElementById('txConto').value.trim();
+        const tipoVar = document.getElementById('txTipoVar').value;
+        const categoria = document.getElementById('txCategoria').value;
+        const importoRaw = document.getElementById('txImporto').value;
+        const descrizione = document.getElementById('txDescrizione').value.trim();
+        const importo = parseFloat(importoRaw);
+
+        if (!conto || !importo || importo <= 0) {
+            alert('Inserisci almeno conto e importo maggiore di zero.');
+            return;
+        }
+
+        esercizio[currentStep].transazioni.push({
+            conto,
+            tipoVar,
+            importo,
+            categoria,
+            descrizione: descrizione || 'Movimento inserito manualmente'
+        });
+
+        document.getElementById('txConto').value = '';
+        document.getElementById('txImporto').value = '';
+        document.getElementById('txDescrizione').value = '';
+
+        renderStep();
+    }
+
+    function removeTransaction(index) {
+        esercizio[currentStep].transazioni.splice(index, 1);
+        renderStep();
+    }
+
+    function renderEditorTransactions(step) {
+        const txList = document.getElementById('txList');
+        if (!step.transazioni.length) {
+            txList.innerHTML = '<div class="tx-empty">Nessun movimento nello step corrente.</div>';
+            return;
+        }
+
+        txList.innerHTML = step.transazioni.map((t, idx) => `
+            <div class="tx-item">
+                <div>
+                    <strong>${t.conto}</strong> | ${t.tipoVar} | ${t.categoria} | € ${Number(t.importo).toFixed(2)}<br>
+                    <small>${t.descrizione || ''}</small>
+                </div>
+                <button class="btn-danger" onclick="removeTransaction(${idx})">Rimuovi</button>
+            </div>
+        `).join('');
+    }
+
+    function createNewStep() {
+        saveCurrentStep();
+        esercizio.push(nuovoStep());
+        currentStep = esercizio.length - 1;
+        renderStep();
+        window.scrollTo(0, 0);
+    }
+
+    function deleteCurrentStep() {
+        if (esercizio.length === 1) {
+            esercizio[0] = nuovoStep();
+            currentStep = 0;
+            renderStep();
+            return;
+        }
+
+        esercizio.splice(currentStep, 1);
+        if (currentStep >= esercizio.length) {
+            currentStep = esercizio.length - 1;
+        }
+        renderStep();
     }
 
     function renderStepContent() {
@@ -588,11 +747,16 @@
         nextBtn.disabled = currentStep === esercizio.length - 1;
         counter.textContent = `Step ${currentStep + 1} di ${esercizio.length}`;
 
-        if (currentStep > 0) prevBtn.textContent = `← ${esercizio[currentStep - 1].titolo.substring(0, 20)}...`;
-        if (currentStep < esercizio.length - 1) nextBtn.textContent = `${esercizio[currentStep + 1].titolo.substring(0, 20)}... →`;
+        prevBtn.textContent = currentStep > 0
+            ? `← ${esercizio[currentStep - 1].titolo.substring(0, 20)}...`
+            : '← Indietro';
+        nextBtn.textContent = currentStep < esercizio.length - 1
+            ? `${esercizio[currentStep + 1].titolo.substring(0, 20)}... →`
+            : 'Avanti →';
     }
 
     function nextStep() {
+        syncCurrentStepFromEditor();
         if (currentStep < esercizio.length - 1) {
             currentStep++;
             renderStep();
@@ -601,6 +765,7 @@
     }
 
     function prevStep() {
+        syncCurrentStepFromEditor();
         if (currentStep > 0) {
             currentStep--;
             renderStep();
@@ -609,6 +774,7 @@
     }
 
     function navigateToStep(step) {
+        syncCurrentStepFromEditor();
         currentStep = step;
         renderStep();
         window.scrollTo(0, 0);
