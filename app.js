@@ -986,6 +986,24 @@ function renderGuidedGiornaleTable(step) {
 
 function renderGuidedMastriniTable(step) {
     const rows = step.reportGuided.mastrini;
+
+    const cards = rows.map((r) => {
+        const dare = r.dare ? Number(r.dare).toFixed(2) : '-';
+        const avere = r.avere ? Number(r.avere).toFixed(2) : '-';
+        const saldo = (r.saldo !== '' && r.saldo !== undefined) ? Number(r.saldo).toFixed(2) : (Number(r.dare || 0) - Number(r.avere || 0)).toFixed(2);
+        const stato = r.stato || (Math.abs(Number(saldo)) < 0.0001 ? 'CHIUSO' : 'APERTO');
+        return `
+            <div class="mastrino-t">
+                <div class="t-header">${escapeHtml(r.conto || 'Conto senza nome')}</div>
+                <div class="t-content">
+                    <div class="t-side"><strong>Dare</strong><br>${dare}</div>
+                    <div class="t-side"><strong>Avere</strong><br>${avere}</div>
+                </div>
+                <div class="t-footer">Saldo: ${saldo} | ${escapeHtml(stato)}</div>
+            </div>
+        `;
+    }).join('');
+
     const body = rows.map((r, i) => `
         <tr>
             <td>${escapeHtml(r.conto || '-')}</td>
@@ -1002,6 +1020,9 @@ function renderGuidedMastriniTable(step) {
     `).join('');
 
     return `
+        <h3>Vista grafica mastrini</h3>
+        ${cards ? `<div class="mastrini-wrapper">${cards}</div>` : '<div class="step-info">Nessun mastrino visibile: genera o aggiungi righe.</div>'}
+        <h3 style="margin-top:12px;">Dettaglio righe mastrini</h3>
         <table class="journal-table">
             <thead>
                 <tr><th>Conto</th><th>Dare</th><th>Avere</th><th>Saldo</th><th>Stato</th><th>Riferimenti</th><th></th></tr>
