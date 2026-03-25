@@ -866,6 +866,21 @@ function renderStepContent() {
 
     const html = `
         <div class="panel">
+            <h2>Mastrini (manuale guidato)</h2>
+            <div class="builder-actions">
+                <button onclick="generateSection('mastrini')">Genera automaticamente</button>
+                <button onclick="addGuidedRow('mastrini')">Aggiungi riga</button>
+                <button class="btn-secondary" onclick="clearSection('mastrini')">Svuota</button>
+            </div>
+            ${renderGuidedMastriniTable(step)}
+        </div>
+
+        <div class="panel">
+            <h2>Libro Mastro (riepilogo conti)</h2>
+            ${renderLibroMastroTable()}
+        </div>
+
+        <div class="panel">
             <h2>Libro Giornale (manuale guidato)</h2>
             <div class="builder-actions">
                 <button onclick="generateSection('giornale')">Genera automaticamente</button>
@@ -874,16 +889,6 @@ function renderStepContent() {
             </div>
             <p>${helper}</p>
             ${renderGuidedGiornaleTable(step)}
-        </div>
-
-        <div class="panel">
-            <h2>Mastrini (manuale guidato)</h2>
-            <div class="builder-actions">
-                <button onclick="generateSection('mastrini')">Genera automaticamente</button>
-                <button onclick="addGuidedRow('mastrini')">Aggiungi riga</button>
-                <button class="btn-secondary" onclick="clearSection('mastrini')">Svuota</button>
-            </div>
-            ${renderGuidedMastriniTable(step)}
         </div>
 
         <div class="panel">
@@ -980,6 +985,32 @@ function renderGuidedGiornaleTable(step) {
                 <tr><th>Data</th><th>Conto</th><th>Analisi</th><th>Dare</th><th>Avere</th><th>Descrizione</th><th></th></tr>
             </thead>
             <tbody>${body || '<tr><td colspan="7">Nessuna riga. Usa "Aggiungi riga".</td></tr>'}</tbody>
+        </table>
+    `;
+}
+
+function renderLibroMastroTable() {
+    const rows = Object.entries(conti).map(([nome, dati]) => {
+        const totaleDare = dati.dare.reduce((a, b) => a + b, 0);
+        const totaleAvere = dati.avere.reduce((a, b) => a + b, 0);
+        const saldo = totaleDare - totaleAvere;
+
+        return `
+            <tr>
+                <td>${escapeHtml(nome)}</td>
+                <td>${totaleDare.toFixed(2)}</td>
+                <td>${totaleAvere.toFixed(2)}</td>
+                <td>${saldo.toFixed(2)}</td>
+            </tr>
+        `;
+    }).join('');
+
+    return `
+        <table class="journal-table">
+            <thead>
+                <tr><th>Conto</th><th>Totale Dare</th><th>Totale Avere</th><th>Saldo</th></tr>
+            </thead>
+            <tbody>${rows || '<tr><td colspan="4">Nessun conto disponibile.</td></tr>'}</tbody>
         </table>
     `;
 }

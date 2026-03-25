@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Taccuino Contabile</title>
+    <style>
+        :root {
+            --ink: #1f2937;
+            --muted: #64748b;
+            --paper: #f8fafc;
+            --panel: #ffffff;
+            --line: #dbe3ef;
+            --accent: #0f766e;
+            --accent-2: #0ea5e9;
+            --danger: #dc2626;
+            --soft: #eef6ff;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            font-family: "Trebuchet MS", "Verdana", sans-serif;
+            color: var(--ink);
+            background:
+                radial-gradient(60rem 20rem at 10% -20%, #d7f3ec 0%, transparent 60%),
+                radial-gradient(45rem 18rem at 100% 0%, #d8ecff 0%, transparent 55%),
+                var(--paper);
+        }
+
+        .layout {
+            min-height: 100vh;
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            gap: 16px;
+            padding: 16px;
+        }
+
+        .sidebar, .main {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            box-shadow: 0 8px 26px rgba(15, 23, 42, 0.06);
+        }
+
+        .sidebar { padding: 14px; }
+        .main { padding: 18px; }
+
+        h1 { margin: 0; font-size: 1.4rem; }
+        h2 { margin: 0 0 10px 0; font-size: 1.05rem; }
+        h3 { margin: 0; font-size: 0.95rem; }
+
+        .muted { color: var(--muted); font-size: 0.86rem; }
+
+        .topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 14px;
+        }
+
+        .btn {
+            border: none;
+            border-radius: 8px;
+            padding: 9px 12px;
+            font-size: 0.86rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: 0.2s ease;
+        }
+
+        .btn:hover { transform: translateY(-1px); }
+
+        .btn-primary { background: var(--accent); color: #fff; }
+        .btn-soft { background: #e2e8f0; color: #1e293b; }
+        .btn-danger { background: #fee2e2; color: var(--danger); }
+        .btn-link { background: #e0f2fe; color: #0369a1; text-decoration: none; display: inline-block; }
+
+        .pages-list {
+            margin-top: 10px;
+            display: grid;
+            gap: 8px;
+            max-height: 70vh;
+            overflow: auto;
+            padding-right: 4px;
+        }
+
+        .page-item {
+            border: 1px solid var(--line);
+            background: #f8fbff;
+            border-radius: 10px;
+            padding: 8px;
+            display: grid;
+            gap: 8px;
+        }
+
+        .page-item.active {
+            border-color: var(--accent-2);
+            background: #e8f6ff;
+            box-shadow: inset 0 0 0 1px rgba(14, 165, 233, 0.25);
+        }
+
+        .page-title {
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .row-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .mini {
+            padding: 5px 8px;
+            font-size: 0.74rem;
+        }
+
+        .editor {
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            padding: 12px;
+            background: var(--soft);
+            margin-bottom: 14px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 10px;
+            margin-top: 8px;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            padding: 8px 9px;
+            font-size: 0.88rem;
+            background: #fff;
+        }
+
+        textarea { min-height: 80px; resize: vertical; }
+        label { font-size: 0.79rem; color: #334155; display: block; margin-bottom: 4px; font-weight: 700; }
+
+        .items {
+            display: grid;
+            gap: 10px;
+        }
+
+        .item {
+            border: 1px solid var(--line);
+            border-radius: 11px;
+            background: #fff;
+            overflow: hidden;
+        }
+
+        .item-head {
+            display: flex;
+            justify-content: space-between;
+            gap: 8px;
+            padding: 10px;
+            background: #f8fbff;
+            border-bottom: 1px solid var(--line);
+            align-items: center;
+        }
+
+        .tag {
+            display: inline-block;
+            font-size: 0.72rem;
+            font-weight: 700;
+            border-radius: 99px;
+            padding: 3px 8px;
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .item-body {
+            padding: 11px;
+            font-size: 0.88rem;
+            line-height: 1.45;
+        }
+
+        .kv { margin: 2px 0; }
+        .empty {
+            border: 1px dashed #94a3b8;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            color: #475569;
+            background: #f8fafc;
+        }
+
+        .overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.45);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            z-index: 1000;
+        }
+
+        .overlay.open { display: flex; }
+
+        .modal {
+            width: min(860px, 100%);
+            max-height: 90vh;
+            overflow: auto;
+            background: #fff;
+            border-radius: 14px;
+            border: 1px solid var(--line);
+            padding: 14px;
+        }
+
+        @media (max-width: 900px) {
+            .layout { grid-template-columns: 1fr; }
+            .pages-list { max-height: 32vh; }
+        }
+    </style>
+</head>
+<body>
+    <div class="layout">
+        <aside class="sidebar">
+            <div class="topbar">
+                <h2>Taccuino</h2>
+                <button class="btn btn-primary" id="addPageBtn">+ Pagina</button>
+            </div>
+            <div class="muted">Pagine riordinabili, rinominabili e cancellabili.</div>
+            <div id="pagesList" class="pages-list"></div>
+        </aside>
+
+        <main class="main">
+            <div class="topbar">
+                <h1 id="currentPageTitle">Pagina</h1>
+                <a href="index.html" class="btn btn-link">Apri editor principale</a>
+            </div>
+
+            <div class="editor">
+                <div class="grid">
+                    <div>
+                        <label for="newObjectType">Nuovo oggetto contabile</label>
+                        <select id="newObjectType">
+                            <option value="analisi">Aggiungi Analisi Variazioni</option>
+                            <option value="mastrino">Aggiungi Mastrino</option>
+                            <option value="mastro">Aggiungi Libro Mastro</option>
+                            <option value="giornale">Aggiungi Libro Giornale</option>
+                            <option value="note">Aggiungi Note/Commenti/Titolo</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Azioni</label>
+                        <div class="row-actions">
+                            <button class="btn btn-primary" id="newItemBtn">New</button>
+                            <button class="btn btn-soft" id="renamePageBtn">Rinomina pagina</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="items" class="items"></div>
+        </main>
+    </div>
+
+    <div id="overlay" class="overlay">
+        <div class="modal">
+            <div class="topbar" style="margin-bottom: 8px;">
+                <h2 id="modalTitle">Nuovo oggetto</h2>
+                <button class="btn btn-soft" id="closeModalBtn">Chiudi</button>
+            </div>
+            <div id="modalForm"></div>
+            <div class="row-actions" style="margin-top: 12px;">
+                <button class="btn btn-primary" id="saveItemBtn">Salva oggetto</button>
+                <button class="btn btn-soft" id="cancelItemBtn">Annulla</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="taccuino.js" defer></script>
+</body>
+</html>
