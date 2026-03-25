@@ -642,7 +642,7 @@ function buildTypeForm(type, data, mode) {
     }
 
     if (type === 'analisi' && entryOnly) {
-        return window.AnalysisComponents.renderEntryForm(data, escapeHtml);
+        return `${window.AnalysisComponents.renderEntryForm(data, escapeHtml)}${accountsDatalist}`;
     }
 
     const ledgerForm = window.LedgerComponents.renderTypeForm(
@@ -765,6 +765,14 @@ function getKnownAccounts() {
     const accounts = new Set();
     state.pages.forEach((p) => {
         (p.items || []).forEach((item) => {
+            if (item.type === 'analisi') {
+                (item.data.entries || []).forEach((e) => {
+                    if (e.seEconto) accounts.add(String(e.seEconto).trim());
+                    if (e.seUconto) accounts.add(String(e.seUconto).trim());
+                    if (e.sfEconto) accounts.add(String(e.sfEconto).trim());
+                    if (e.sfUconto) accounts.add(String(e.sfUconto).trim());
+                });
+            }
             if ((item.type === 'mastrino' || item.type === 'mastro') && item.data?.conto) {
                 accounts.add(String(item.data.conto).trim());
             }

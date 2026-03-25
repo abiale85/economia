@@ -184,14 +184,13 @@
             const totD = entries.reduce((s, e) => s + Number(e.dare || 0), 0);
             const totA = entries.reduce((s, e) => s + Number(e.avere || 0), 0);
             const saldo = (totD - totA).toFixed(2);
-            const dareLines = entries.map((e) => `${escapeHtml(e.descrizione || '')} ${escapeHtml(e.dare || '-')}`);
-            const avereLines = entries.map((e) => `${escapeHtml(e.descrizione || '')} ${escapeHtml(e.avere || '-')}`);
+            const dareLines = entries.map((e) => `<span title="${escapeHtml(e.descrizione || '')}">${escapeHtml(e.dare || '-')}</span>`);
+            const avereLines = entries.map((e) => `<span title="${escapeHtml(e.descrizione || '')}">${escapeHtml(e.avere || '-')}</span>`);
 
             const entryBlocks = entries.map((e, idx) => `
                 <tr>
-                    <td>${escapeHtml(e.descrizione || '-')}</td>
-                    <td>${escapeHtml(e.dare || '-')}</td>
-                    <td>${escapeHtml(e.avere || '-')}</td>
+                    <td title="${escapeHtml(e.descrizione || '')}">${escapeHtml(e.dare || '-')}</td>
+                    <td title="${escapeHtml(e.descrizione || '')}">${escapeHtml(e.avere || '-')}</td>
                     <td>${renderEntryActions(item.id, idx, true)}</td>
                 </tr>
             `).join('');
@@ -200,8 +199,8 @@
                 return `
                     <div class="kv"><strong>Conto:</strong> ${escapeHtml(d.conto || '-')}</div>
                     <table class="ledger-table" style="margin-top:6px;">
-                        <thead><tr><th>Descrizione</th><th>Dare</th><th>Avere</th><th>Azioni voce</th></tr></thead>
-                        <tbody>${entryBlocks || '<tr><td colspan="4">Nessuna voce.</td></tr>'}</tbody>
+                        <thead><tr><th>Dare</th><th>Avere</th><th>Azioni voce</th></tr></thead>
+                        <tbody>${entryBlocks || '<tr><td colspan="3">Nessuna voce.</td></tr>'}</tbody>
                     </table>
                     <div class="t-foot" style="margin-top:6px;">Saldo: ${saldo} | Stato: ${escapeHtml(d.stato || 'APERTO')}</div>
                 `;

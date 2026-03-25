@@ -77,7 +77,7 @@
                         <td>
                             <div class="analysis-cell">
                                 <input name="seEimporto" value="${escapeHtml(data.seEimporto || '')}" placeholder="Importo">
-                                <input name="seEconto" value="${escapeHtml(data.seEconto || '')}" placeholder="Conto">
+                                <input list="contoSuggestions" name="seEconto" value="${escapeHtml(data.seEconto || '')}" placeholder="Conto">
                                 <input name="seEdescrizione" value="${escapeHtml(data.seEdescrizione || '')}" placeholder="Descrizione">
                                 <input name="seEcodice" value="${escapeHtml(data.seEcodice || '')}" placeholder="Codice (VFA/VFP/VEN/VEP)">
                             </div>
@@ -85,7 +85,7 @@
                         <td>
                             <div class="analysis-cell">
                                 <input name="seUimporto" value="${escapeHtml(data.seUimporto || '')}" placeholder="Importo">
-                                <input name="seUconto" value="${escapeHtml(data.seUconto || '')}" placeholder="Conto">
+                                <input list="contoSuggestions" name="seUconto" value="${escapeHtml(data.seUconto || '')}" placeholder="Conto">
                                 <input name="seUdescrizione" value="${escapeHtml(data.seUdescrizione || '')}" placeholder="Descrizione">
                                 <input name="seUcodice" value="${escapeHtml(data.seUcodice || '')}" placeholder="Codice (VFA/VFP/VEN/VEP)">
                             </div>
@@ -96,7 +96,7 @@
                         <td>
                             <div class="analysis-cell">
                                 <input name="sfEimporto" value="${escapeHtml(data.sfEimporto || '')}" placeholder="Importo">
-                                <input name="sfEconto" value="${escapeHtml(data.sfEconto || '')}" placeholder="Conto">
+                                <input list="contoSuggestions" name="sfEconto" value="${escapeHtml(data.sfEconto || '')}" placeholder="Conto">
                                 <input name="sfEdescrizione" value="${escapeHtml(data.sfEdescrizione || '')}" placeholder="Descrizione">
                                 <input name="sfEcodice" value="${escapeHtml(data.sfEcodice || '')}" placeholder="Codice (VFA/VFP/VEN/VEP)">
                             </div>
@@ -104,7 +104,7 @@
                         <td>
                             <div class="analysis-cell">
                                 <input name="sfUimporto" value="${escapeHtml(data.sfUimporto || '')}" placeholder="Importo">
-                                <input name="sfUconto" value="${escapeHtml(data.sfUconto || '')}" placeholder="Conto">
+                                <input list="contoSuggestions" name="sfUconto" value="${escapeHtml(data.sfUconto || '')}" placeholder="Conto">
                                 <input name="sfUdescrizione" value="${escapeHtml(data.sfUdescrizione || '')}" placeholder="Descrizione">
                                 <input name="sfUcodice" value="${escapeHtml(data.sfUcodice || '')}" placeholder="Codice (VFA/VFP/VEN/VEP)">
                             </div>
@@ -170,44 +170,44 @@
         const out = [];
         (entries || []).map(normalizeEntry).forEach((r) => {
             const seEamt = parseAmount(r.seEimporto);
-            if (seEamt > 0 && r.seEconto) {
+            if (seEamt !== 0 && r.seEconto) {
                 out.push({
                     conto: r.seEconto,
                     code: normalizeVarCode(r.seEcodice, '+'),
-                    amount: seEamt,
+                    amount: Math.abs(seEamt),
                     descrizione: r.seEdescrizione || 'SE-E da Analisi',
                     side: 'SE-E'
                 });
             }
 
             const seUamt = parseAmount(r.seUimporto);
-            if (seUamt > 0 && r.seUconto) {
+            if (seUamt !== 0 && r.seUconto) {
                 out.push({
                     conto: r.seUconto,
                     code: normalizeVarCode(r.seUcodice, '-'),
-                    amount: seUamt,
+                    amount: Math.abs(seUamt),
                     descrizione: r.seUdescrizione || 'SE-U da Analisi',
                     side: 'SE-U'
                 });
             }
 
             const sfEamt = parseAmount(r.sfEimporto);
-            if (sfEamt > 0 && r.sfEconto) {
+            if (sfEamt !== 0 && r.sfEconto) {
                 out.push({
                     conto: r.sfEconto,
                     code: normalizeVarCode(r.sfEcodice, '+'),
-                    amount: sfEamt,
+                    amount: Math.abs(sfEamt),
                     descrizione: r.sfEdescrizione || 'SF-E da Analisi',
                     side: 'SF-E'
                 });
             }
 
             const sfUamt = parseAmount(r.sfUimporto);
-            if (sfUamt > 0 && r.sfUconto) {
+            if (sfUamt !== 0 && r.sfUconto) {
                 out.push({
                     conto: r.sfUconto,
                     code: normalizeVarCode(r.sfUcodice, '-'),
-                    amount: sfUamt,
+                    amount: Math.abs(sfUamt),
                     descrizione: r.sfUdescrizione || 'SF-U da Analisi',
                     side: 'SF-U'
                 });
