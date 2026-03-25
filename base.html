@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Accounting Lab - Analisi & Bilancio</title>
+    <style>
+        :root {
+            --primary: #2c3e50; --secondary: #34495e; --accent: #3498db;
+            --success: #27ae60; --danger: #e74c3c; --bg: #f8f9fa;
+        }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); margin: 0; padding: 20px; color: #333; }
+        .container { max-width: 1200px; margin: auto; }
+        
+        /* Dashboard Inserimento */
+        .panel { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 30px; }
+        h2 { color: var(--primary); border-left: 5px solid var(--accent); padding-left: 15px; margin-bottom: 20px; font-size: 1.4rem; }
+        
+        .grid-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; align-items: end; }
+        input, select { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
+        button { background: var(--accent); color: white; border: none; padding: 12px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.3s; }
+        button:hover { background: #2980b9; transform: translateY(-2px); }
+
+        /* Libro Giornale Moderno */
+        .journal-table { width: 100%; border-collapse: separate; border-spacing: 0 8px; }
+        .journal-table th { padding: 15px; text-align: left; color: var(--secondary); font-weight: 600; border-bottom: 2px solid #eee; }
+        .journal-row { background: white; transition: 0.2s; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
+        .journal-row td { padding: 15px; border-top: 1px solid #eee; border-bottom: 1px solid #eee; }
+        .journal-row:first-child td { border-top: none; }
+        .badge { padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; text-transform: uppercase; }
+        .vfa { background: #d4edda; color: #155724; } .vfp { background: #f8d7da; color: #721c24; }
+        .ven { background: #fff3cd; color: #856404; } .vep { background: #d1ecf1; color: #0c5460; }
+
+        /* Mastrini a T */
+        .mastrini-wrapper { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 25px; }
+        .mastrino-t { background: white; border-radius: 4px; overflow: hidden; }
+        .t-header { text-align: center; font-weight: bold; padding: 10px; border-bottom: 2px solid var(--primary); background: #eee; }
+        .t-content { display: grid; grid-template-columns: 1fr 1fr; min-height: 100px; position: relative; }
+        .t-content::after { content: ""; position: absolute; left: 50%; top: 0; bottom: 0; width: 2px; background: var(--primary); }
+        .t-side { padding: 10px; font-size: 0.85rem; }
+        .t-footer { border-top: 1px solid #ccc; padding: 5px; text-align: center; font-weight: bold; font-size: 0.9rem; }
+
+        /* Bilancio */
+        .bilancio-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
+        .statement { background: white; padding: 20px; border-radius: 8px; }
+        .val { text-align: right; font-family: 'Courier New', Courier, monospace; }
+        .total-box { background: var(--primary); color: white; padding: 10px; margin-top: 10px; border-radius: 4px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Accounting Dashboard</h1>
+
+    <div class="panel">
+        <h2>Inserimento Operazione (Analisi Variazioni)</h2>
+        <div class="grid-form">
+            <div>
+                <label>Conto</label>
+                <input type="text" id="conto" placeholder="es. Banca c/c">
+            </div>
+            <div>
+                <label>Variazione</label>
+                <select id="tipoVar">
+                    <option value="VFA">VFA (+ Attivo / - Passivo)</option>
+                    <option value="VFP">VFP (- Attivo / + Passivo)</option>
+                    <option value="VEN">VEN (+ Costo / - Netto)</option>
+                    <option value="VEP">VEP (+ Ricavo / + Netto)</option>
+                </select>
+            </div>
+            <div>
+                <label>Importo (€)</label>
+                <input type="number" id="importo" placeholder="0.00">
+            </div>
+            <div>
+                <label>Destinazione</label>
+                <select id="categoria">
+                    <option value="SP">Stato Patrimoniale</option>
+                    <option value="CE">Conto Economico</option>
+                </select>
+            </div>
+            <button onclick="registra()">Registra</button>
+        </div>
+    </div>
+
+    <h2>Libro Giornale</h2>
+    <table class="journal-table">
+        <thead>
+            <tr>
+                <th>Data/ID</th>
+                <th>Conto e Descrizione</th>
+                <th>Analisi</th>
+                <th style="text-align:right">Dare (€)</th>
+                <th style="text-align:right">Avere (€)</th>
+            </tr>
+        </thead>
+        <tbody id="journalBody">
+            </tbody>
+    </table>
+
+    <h2>Mastrini (Conti a T)</h2>
+    <div id="mastriniContainer" class="mastrini-wrapper">
+        </div>
+
+    <div class="bilancio-grid" style="margin-top: 40px;">
+        <div class="statement">
+            <h3>Conto Economico (Costi e Ricavi)</h3>
+            <table width="100%" id="ceTable"></table>
+            <div id="utilePerdita" class="total-box">Risultato: € 0.00</div>
+        </div>
+        <div class="statement">
+            <h3>Stato Patrimoniale (Attivo e Passivo)</h3>
+            <table width="100%" id="spTable"></table>
+        </div>
+    </div>
+</div>
+
+<script>
+    let transazioni = [];
+    let conti = {};
+
+    function registra() {
+        const nome = document.getElementById('conto').value.toUpperCase();
+        const tipoVar = document.getElementById('tipoVar').value;
+        const importo = parseFloat(document.getElementById('importo').value);
+        const cat = document.getElementById('categoria').value;
+
+        if (!nome || isNaN(importo)) return alert("Compila tutti i campi correttamente.");
+
+        // Logica Dare/Avere basata sull'Analisi delle Variazioni
+        let dare = (tipoVar === 'VFA' || tipoVar === 'VEN') ? importo : 0;
+        let avere = (tipoVar === 'VFP' || tipoVar === 'VEP') ? importo : 0;
+
+        const transazione = {
+            id: transazioni.length + 1,
+            nome, tipoVar, dare, avere, cat,
+            data: new Date().toLocaleDateString()
+        };
+
+        transazioni.push(transazione);
+
+        // Aggiorna oggetto conti per i mastrini
+        if (!conti[nome]) conti[nome] = { dare: [], avere: [], cat: cat };
+        if (dare > 0) conti[nome].dare.push(dare);
+        if (avere > 0) conti[nome].avere.push(avere);
+
+        renderAll();
+        resetForm();
+    }
+
+    function renderAll() {
+        renderJournal();
+        renderMastrini();
+        renderBilancio();
+    }
+
+    function renderJournal() {
+        const body = document.getElementById('journalBody');
+        body.innerHTML = transazioni.map(t => `
+            <tr class="journal-row">
+                <td style="color: #999; font-size: 0.8rem;">#${t.id}<br>${t.data}</td>
+                <td><strong>${t.nome}</strong><br><small>${t.cat === 'SP' ? 'Conto Patrimoniale' : 'Conto Economico'}</small></td>
+                <td><span class="badge ${t.tipoVar.toLowerCase()}">${t.tipoVar}</span></td>
+                <td class="val" style="color: var(--success)">${t.dare > 0 ? t.dare.toLocaleString('it-IT', {minimumFractionDigits: 2}) : ''}</td>
+                <td class="val" style="color: var(--danger)">${t.avere > 0 ? t.avere.toLocaleString('it-IT', {minimumFractionDigits: 2}) : ''}</td>
+            </tr>
+        `).join('');
+    }
+
+    function renderMastrini() {
+        const container = document.getElementById('mastriniContainer');
+        container.innerHTML = '';
+
+        for (const [nome, dati] of Object.entries(conti)) {
+            const totDare = dati.dare.reduce((a, b) => a + b, 0);
+            const totAvere = dati.avere.reduce((a, b) => a + b, 0);
+            const saldo = totDare - totAvere;
+
+            container.innerHTML += `
+                <div class="mastrino-t">
+                    <div class="t-header">${nome}</div>
+                    <div class="t-content">
+                        <div class="t-side">
+                            ${dati.dare.map(v => `<div>${v.toFixed(2)}</div>`).join('')}
+                        </div>
+                        <div class="t-side" style="text-align: right">
+                            ${dati.avere.map(v => `<div>${v.toFixed(2)}</div>`).join('')}
+                        </div>
+                    </div>
+                    <div class="t-footer">Saldo: ${saldo.toFixed(2)} €</div>
+                </div>
+            `;
+        }
+    }
+
+    function renderBilancio() {
+        const ceTable = document.getElementById('ceTable');
+        const spTable = document.getElementById('spTable');
+        let costi = 0, ricavi = 0;
+        
+        ceTable.innerHTML = '<tr><th>Costi (VEN)</th><th>Ricavi (VEP)</th></tr>';
+        spTable.innerHTML = '<tr><th>Attivo (VFA)</th><th>Passivo (VFP)</th></tr>';
+
+        for (const [nome, dati] of Object.entries(conti)) {
+            const saldo = dati.dare.reduce((a, b) => a + b, 0) - dati.avere.reduce((a, b) => a + b, 0);
+            
+            if (dati.cat === 'CE') {
+                if (saldo > 0) {
+                    ceTable.innerHTML += `<tr><td>${nome}: ${saldo.toFixed(2)}</td><td></td></tr>`;
+                    costi += saldo;
+                } else {
+                    ceTable.innerHTML += `<tr><td></td><td>${nome}: ${Math.abs(saldo).toFixed(2)}</td></tr>`;
+                    ricavi += Math.abs(saldo);
+                }
+            } else {
+                if (saldo > 0) {
+                    spTable.innerHTML += `<tr><td>${nome}: ${saldo.toFixed(2)}</td><td></td></tr>`;
+                } else {
+                    spTable.innerHTML += `<tr><td></td><td>${nome}: ${Math.abs(saldo).toFixed(2)}</td></tr>`;
+                }
+            }
+        }
+        
+        const risultato = ricavi - costi;
+        document.getElementById('utilePerdita').innerHTML = `Risultato d'esercizio (Utile/Perdita): € ${risultato.toFixed(2)}`;
+        document.getElementById('utilePerdita').style.background = risultato >= 0 ? 'var(--success)' : 'var(--danger)';
+    }
+
+    function resetForm() {
+        document.getElementById('conto').value = '';
+        document.getElementById('importo').value = '';
+        document.getElementById('conto').focus();
+    }
+</script>
+
+</body>
+</html>
