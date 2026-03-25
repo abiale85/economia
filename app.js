@@ -936,13 +936,16 @@ function renderGuidedGiornaleTable(step) {
     const rows = step.reportGuided.giornale;
     const body = rows.map((r, i) => `
         <tr>
-            <td><input type="text" value="${escapeHtml(r.data || '')}" onchange="updateGuidedRow('giornale', ${i}, 'data', this.value)"></td>
-            <td><input type="text" value="${escapeHtml(r.conto || '')}" onchange="updateGuidedRow('giornale', ${i}, 'conto', this.value)"></td>
-            <td><input type="text" value="${escapeHtml(r.tipoVar || '')}" onchange="updateGuidedRow('giornale', ${i}, 'tipoVar', this.value)"></td>
-            <td><input type="number" step="0.01" value="${escapeHtml(r.dare || '')}" onchange="updateGuidedRow('giornale', ${i}, 'dare', this.value)"></td>
-            <td><input type="number" step="0.01" value="${escapeHtml(r.avere || '')}" onchange="updateGuidedRow('giornale', ${i}, 'avere', this.value)"></td>
-            <td><input type="text" value="${escapeHtml(r.descrizione || '')}" onchange="updateGuidedRow('giornale', ${i}, 'descrizione', this.value)"></td>
-            <td><button class="btn-danger" onclick="removeGuidedRow('giornale', ${i})">X</button></td>
+            <td>${escapeHtml(r.data || '-')}</td>
+            <td>${escapeHtml(r.conto || '-')}</td>
+            <td>${escapeHtml(r.tipoVar || '-')}</td>
+            <td>${r.dare ? Number(r.dare).toFixed(2) : '-'}</td>
+            <td>${r.avere ? Number(r.avere).toFixed(2) : '-'}</td>
+            <td>${escapeHtml(r.descrizione || '-')}</td>
+            <td>
+                <button class="btn-secondary" onclick="editGuidedRow('giornale', ${i})">Modifica</button>
+                <button class="btn-danger" onclick="removeGuidedRow('giornale', ${i})">Rimuovi</button>
+            </td>
         </tr>
     `).join('');
 
@@ -960,18 +963,16 @@ function renderGuidedMastriniTable(step) {
     const rows = step.reportGuided.mastrini;
     const body = rows.map((r, i) => `
         <tr>
-            <td><input type="text" value="${escapeHtml(r.conto || '')}" onchange="updateGuidedRow('mastrini', ${i}, 'conto', this.value)"></td>
-            <td><input type="number" step="0.01" value="${escapeHtml(r.dare || '')}" onchange="updateGuidedRow('mastrini', ${i}, 'dare', this.value)"></td>
-            <td><input type="number" step="0.01" value="${escapeHtml(r.avere || '')}" onchange="updateGuidedRow('mastrini', ${i}, 'avere', this.value)"></td>
-            <td><input type="number" step="0.01" value="${escapeHtml(r.saldo || '')}" onchange="updateGuidedRow('mastrini', ${i}, 'saldo', this.value)"></td>
+            <td>${escapeHtml(r.conto || '-')}</td>
+            <td>${r.dare ? Number(r.dare).toFixed(2) : '-'}</td>
+            <td>${r.avere ? Number(r.avere).toFixed(2) : '-'}</td>
+            <td>${(r.saldo !== '' && r.saldo !== undefined) ? Number(r.saldo).toFixed(2) : '-'}</td>
+            <td>${escapeHtml(r.stato || '-')}</td>
+            <td>${escapeHtml(r.riferimenti || '-')}</td>
             <td>
-                <select onchange="updateGuidedRow('mastrini', ${i}, 'stato', this.value)">
-                    <option value="APERTO" ${String(r.stato || '') === 'APERTO' ? 'selected' : ''}>APERTO</option>
-                    <option value="CHIUSO" ${String(r.stato || '') === 'CHIUSO' ? 'selected' : ''}>CHIUSO</option>
-                </select>
+                <button class="btn-secondary" onclick="editGuidedRow('mastrini', ${i})">Modifica</button>
+                <button class="btn-danger" onclick="removeGuidedRow('mastrini', ${i})">Rimuovi</button>
             </td>
-            <td><input type="text" value="${escapeHtml(r.riferimenti || '')}" onchange="updateGuidedRow('mastrini', ${i}, 'riferimenti', this.value)"></td>
-            <td><button class="btn-danger" onclick="removeGuidedRow('mastrini', ${i})">X</button></td>
         </tr>
     `).join('');
 
@@ -990,18 +991,13 @@ function renderGuidedCeSpTable(step, section) {
     const isCe = section === 'ce';
     const body = rows.map((r, i) => `
         <tr>
+            <td>${escapeHtml(r.tipo || (isCe ? 'Costo' : 'Attivo'))}</td>
+            <td>${escapeHtml(r.conto || '-')}</td>
+            <td>${r.importo ? Number(r.importo).toFixed(2) : '-'}</td>
             <td>
-                <select onchange="updateGuidedRow('${section}', ${i}, 'tipo', this.value)">
-                    ${(isCe
-                        ? ['Costo', 'Ricavo']
-                        : ['Attivo', 'Passivo'])
-                        .map((x) => `<option value="${x}" ${String(r.tipo || '') === x ? 'selected' : ''}>${x}</option>`)
-                        .join('')}
-                </select>
+                <button class="btn-secondary" onclick="editGuidedRow('${section}', ${i})">Modifica</button>
+                <button class="btn-danger" onclick="removeGuidedRow('${section}', ${i})">Rimuovi</button>
             </td>
-            <td><input type="text" value="${escapeHtml(r.conto || '')}" onchange="updateGuidedRow('${section}', ${i}, 'conto', this.value)"></td>
-            <td><input type="number" step="0.01" value="${escapeHtml(r.importo || '')}" onchange="updateGuidedRow('${section}', ${i}, 'importo', this.value)"></td>
-            <td><button class="btn-danger" onclick="removeGuidedRow('${section}', ${i})">X</button></td>
         </tr>
     `).join('');
 
@@ -1019,15 +1015,78 @@ function addGuidedRow(section) {
     const step = esercizio[currentStep];
     ensureStepStructures(step);
 
-    const defaults = {
-        giornale: { ref: '', data: new Date().toLocaleDateString('it-IT'), conto: '', tipoVar: '', dare: '', avere: '', descrizione: '' },
-        mastrini: { conto: '', dare: '', avere: '', saldo: '', stato: 'APERTO', riferimenti: '' },
-        ce: { tipo: 'Costo', conto: '', importo: '' },
-        sp: { tipo: 'Attivo', conto: '', importo: '' }
-    };
+    let row = null;
+    if (section === 'giornale') {
+        const conto = prompt('Conto (Libro Giornale):', '');
+        if (conto === null) return;
+        row = {
+            ref: '',
+            data: prompt('Data:', new Date().toLocaleDateString('it-IT')) || '',
+            conto: conto.trim(),
+            tipoVar: (prompt('Analisi (VFA/VFP/VEN/VEP):', 'VFA') || '').trim(),
+            dare: prompt('Importo Dare (vuoto se non presente):', '') || '',
+            avere: prompt('Importo Avere (vuoto se non presente):', '') || '',
+            descrizione: prompt('Descrizione:', '') || ''
+        };
+    } else if (section === 'mastrini') {
+        const conto = prompt('Conto (Mastrino):', '');
+        if (conto === null) return;
+        row = {
+            conto: conto.trim(),
+            dare: prompt('Totale Dare:', '') || '',
+            avere: prompt('Totale Avere:', '') || '',
+            saldo: prompt('Saldo:', '') || '',
+            stato: (prompt('Stato (APERTO/CHIUSO):', 'APERTO') || 'APERTO').toUpperCase(),
+            riferimenti: prompt('Riferimenti TX:', '') || ''
+        };
+    } else if (section === 'ce' || section === 'sp') {
+        const conto = prompt(`Conto (${section.toUpperCase()}):`, '');
+        if (conto === null) return;
+        row = {
+            tipo: prompt(`Tipo (${section === 'ce' ? 'Costo/Ricavo' : 'Attivo/Passivo'}):`, section === 'ce' ? 'Costo' : 'Attivo') || (section === 'ce' ? 'Costo' : 'Attivo'),
+            conto: conto.trim(),
+            importo: prompt('Importo:', '') || ''
+        };
+    }
 
-    if (!defaults[section]) return;
-    step.reportGuided[section].push({ ...defaults[section] });
+    if (!row) return;
+    step.reportGuided[section].push(row);
+    syncReportManualFromGuided(step);
+    renderStep();
+}
+
+function editGuidedRow(section, index) {
+    const step = esercizio[currentStep];
+    ensureStepStructures(step);
+    const row = step.reportGuided[section]?.[index];
+    if (!row) return;
+
+    if (section === 'giornale') {
+        const conto = prompt('Conto (Libro Giornale):', row.conto || '');
+        if (conto === null) return;
+        row.data = prompt('Data:', row.data || '') || '';
+        row.conto = conto.trim();
+        row.tipoVar = (prompt('Analisi (VFA/VFP/VEN/VEP):', row.tipoVar || '') || '').trim();
+        row.dare = prompt('Importo Dare (vuoto se non presente):', row.dare || '') || '';
+        row.avere = prompt('Importo Avere (vuoto se non presente):', row.avere || '') || '';
+        row.descrizione = prompt('Descrizione:', row.descrizione || '') || '';
+    } else if (section === 'mastrini') {
+        const conto = prompt('Conto (Mastrino):', row.conto || '');
+        if (conto === null) return;
+        row.conto = conto.trim();
+        row.dare = prompt('Totale Dare:', row.dare || '') || '';
+        row.avere = prompt('Totale Avere:', row.avere || '') || '';
+        row.saldo = prompt('Saldo:', row.saldo || '') || '';
+        row.stato = (prompt('Stato (APERTO/CHIUSO):', row.stato || 'APERTO') || 'APERTO').toUpperCase();
+        row.riferimenti = prompt('Riferimenti TX:', row.riferimenti || '') || '';
+    } else if (section === 'ce' || section === 'sp') {
+        const conto = prompt(`Conto (${section.toUpperCase()}):`, row.conto || '');
+        if (conto === null) return;
+        row.tipo = prompt(`Tipo (${section === 'ce' ? 'Costo/Ricavo' : 'Attivo/Passivo'}):`, row.tipo || (section === 'ce' ? 'Costo' : 'Attivo')) || row.tipo;
+        row.conto = conto.trim();
+        row.importo = prompt('Importo:', row.importo || '') || '';
+    }
+
     syncReportManualFromGuided(step);
     renderStep();
 }
