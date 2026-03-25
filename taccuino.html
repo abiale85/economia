@@ -127,6 +127,32 @@
             margin-bottom: 14px;
         }
 
+        .auto-sync {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 14px;
+            margin-bottom: 10px;
+            padding: 8px;
+            border: 1px dashed #9fb6d8;
+            border-radius: 8px;
+            background: #f8fcff;
+        }
+
+        .auto-sync label {
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: #1e3a5f;
+        }
+
+        .auto-sync input[type="checkbox"] {
+            width: auto;
+            margin: 0;
+        }
+
         .grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -148,7 +174,9 @@
 
         .items {
             display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
             gap: 10px;
+            align-items: start;
         }
 
         .item {
@@ -156,6 +184,15 @@
             border-radius: 11px;
             background: #fff;
             overflow: hidden;
+        }
+
+        .item--wide {
+            grid-column: 1 / -1;
+        }
+
+        .item--mastrino {
+            max-width: 520px;
+            width: 100%;
         }
 
         .item-head {
@@ -340,6 +377,8 @@
             .pages-list { max-height: 32vh; }
             .schema-grid { grid-template-columns: 1fr; }
             .schema-arrow { transform: rotate(90deg); }
+            .items { grid-template-columns: 1fr; }
+            .item--wide { grid-column: auto; }
         }
     </style>
 </head>
@@ -361,6 +400,11 @@
             </div>
 
             <div class="editor">
+                <div class="auto-sync">
+                    <label><input type="checkbox" id="autoAddBooks"> Auto-aggiungi Libro Giornale, Libro Mastro, CE/SP da un mastrino</label>
+                    <label><input type="checkbox" id="autoUpdateBooks"> Auto-aggiorna le sezioni contabili quando modifichi un mastrino</label>
+                    <label><input type="checkbox" id="editMode"> Edit mode componenti</label>
+                </div>
                 <div class="grid">
                     <div>
                         <label for="newObjectType">Nuovo oggetto contabile</label>
@@ -369,6 +413,7 @@
                             <option value="mastrino">Aggiungi Mastrino</option>
                             <option value="mastro">Aggiungi Libro Mastro</option>
                             <option value="giornale">Aggiungi Libro Giornale</option>
+                            <option value="bilancio">Aggiungi Conto Economico + Stato Patrimoniale</option>
                             <option value="note">Aggiungi Note/Commenti/Titolo</option>
                         </select>
                     </div>

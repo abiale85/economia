@@ -2,7 +2,12 @@ const STORAGE_KEY = 'taccuinoContabile.v1';
 
 let state = {
     currentPageId: null,
-    pages: []
+    pages: [],
+    settings: {
+        autoAddBooks: false,
+        autoUpdateBooks: false,
+        editMode: false
+    }
 };
 
 let editorState = {
@@ -50,6 +55,13 @@ function defaultDataByType(type) {
         return {
             titolo: 'Registrazioni giornale',
             entries: [defaultEntryByType('giornale')]
+        };
+    }
+    if (type === 'bilancio') {
+        return {
+            titolo: 'Conto Economico e Stato Patrimoniale',
+            ceEntries: [],
+            spEntries: []
         };
     }
     return {
@@ -109,6 +121,7 @@ function typeLabel(type) {
         mastrino: 'Mastrino',
         mastro: 'Libro Mastro',
         giornale: 'Libro Giornale',
+        bilancio: 'Conto Economico + Stato Patrimoniale',
         note: 'Note/Commenti/Titolo'
     };
     return map[type] || type;
@@ -138,6 +151,11 @@ function loadState() {
 function normalizeState(raw) {
     const normalized = {
         currentPageId: raw.currentPageId,
+        settings: {
+            autoAddBooks: Boolean(raw?.settings?.autoAddBooks),
+            autoUpdateBooks: Boolean(raw?.settings?.autoUpdateBooks),
+            editMode: Boolean(raw?.settings?.editMode)
+        },
         pages: (raw.pages || []).map((p) => ({
             id: p.id || uid('page'),
             title: p.title || 'Pagina',
@@ -253,6 +271,18 @@ function normalizeItem(item) {
         };
     }
 
+    if (type === 'bilancio') {
+        return {
+            id: item.id || uid('item'),
+            type,
+            data: {
+                titolo: data.titolo || 'Conto Economico e Stato Patrimoniale',
+                ceEntries: Array.isArray(data.ceEntries) ? data.ceEntries : [],
+                spEntries: Array.isArray(data.spEntries) ? data.spEntries : []
+            }
+        };
+    }
+
     const noteLegacy = data.commenti ? [{ testo: data.commenti }] : [];
     return {
         id: item.id || uid('item'),
@@ -352,6 +382,7 @@ function renderPagesList() {
 
 function renderMain() {
     const page = getCurrentPage();
+    const editMode = getSettings().editMode;
     document.getElementById('currentPageTitle').textContent = page.title;
     const items = document.getElementById('items');
 
@@ -360,27 +391,44 @@ function renderMain() {
         return;
     }
 
-    items.innerHTML = page.items.map((item) => `
-        <article class="item">
+    items.innerHTML = page.items.map((item) => {
+        const cardClass = item.type === 'mastrino' ? 'item item--mastrino' : 'item item--wide';
+        const extraMastrinoBtn = editMode && item.type === 'mastrino'
+            ? `<button class="btn btn-soft mini" data-action="item-add-side-mastrino" data-id="${item.id}">Mastrino accanto</button>`
+            : '';
+        const addEntryBtn = !editMode || item.type === 'bilancio'
+            ? ''
+            : `<button class="btn btn-soft mini" data-action="item-add-entry" data-id="${item.id}">Aggiungi voce</button>`;
+        const manageBtns = editMode
+            ? `
+                    <button class="btn btn-soft mini" data-action="item-up" data-id="${item.id}">Su</button>
+                    <button class="btn btn-soft mini" data-action="item-down" data-id="${item.id}">Giu</button>
+                    ${extraMastrinoBtn}
+                    ${addEntryBtn}
+                    <button class="btn btn-soft mini" data-action="item-edit" data-id="${item.id}">Modifica</button>
+                    <button class="btn btn-danger mini" data-action="item-delete" data-id="${item.id}">Elimina</button>
+              `
+            : '';
+
+        return `
+        <article class="${cardClass}">
             <div class="item-head">
                 <div>
                     <span class="tag">${escapeHtml(typeLabel(item.type))}</span>
                 </div>
                 <div class="row-actions">
-                    <button class="btn btn-soft mini" data-action="item-up" data-id="${item.id}">Su</button>
-                    <button class="btn btn-soft mini" data-action="item-down" data-id="${item.id}">Giu</button>
-                    <button class="btn btn-soft mini" data-action="item-add-entry" data-id="${item.id}">Aggiungi voce</button>
-                    <button class="btn btn-soft mini" data-action="item-edit" data-id="${item.id}">Modifica</button>
-                    <button class="btn btn-danger mini" data-action="item-delete" data-id="${item.id}">Elimina</button>
+                    ${manageBtns}
                 </div>
             </div>
             <div class="item-body">${renderItemBody(item)}</div>
         </article>
-    `).join('');
+    `;
+    }).join('');
 }
 
 function renderItemBody(item) {
     const d = item.data || {};
+    const editMode = getSettings().editMode;
     if (item.type === 'analisi') {
         const rows = (d.entries || []).map((r, idx) => `
             <div class="schema-box">
@@ -424,6 +472,17 @@ function renderItemBody(item) {
             </tr>
         `).join('');
 
+        if (editMode) {
+            return `
+                <div class="kv"><strong>Conto:</strong> ${escapeHtml(d.conto || '-')}</div>
+                <table class="ledger-table" style="margin-top:6px;">
+                    <thead><tr><th>Data</th><th>Descrizione</th><th>Dare</th><th>Avere</th><th>Azioni voce</th></tr></thead>
+                    <tbody>${entryBlocks || '<tr><td colspan="5">Nessuna voce.</td></tr>'}</tbody>
+                </table>
+                <div class="t-foot" style="margin-top:6px;">Saldo: ${saldo} | Stato: ${escapeHtml(d.stato || 'APERTO')}</div>
+            `;
+        }
+
         return `
             <div class="t-accounts">
                 <div class="t-account">
@@ -434,30 +493,34 @@ function renderItemBody(item) {
                     </div>
                     <div class="t-foot">Saldo: ${saldo} | Stato: ${escapeHtml(d.stato || 'APERTO')}</div>
                 </div>
-                <table class="ledger-table">
-                    <thead><tr><th>Data</th><th>Descrizione</th><th>Dare</th><th>Avere</th><th>Azioni voce</th></tr></thead>
-                    <tbody>${entryBlocks || '<tr><td colspan="5">Nessuna voce.</td></tr>'}</tbody>
-                </table>
             </div>
         `;
     }
 
     if (item.type === 'mastro') {
         const rows = (d.entries || []).map((e, idx) => `
+            ${(() => {
+                const dare = Number(e.totaleDare || 0);
+                const avere = Number(e.totaleAvere || 0);
+                const bothEmpty = !String(e.totaleDare || '').trim() && !String(e.totaleAvere || '').trim();
+                const saldo = bothEmpty ? '-' : (dare - avere).toFixed(2);
+                return `
             <tr>
                 <td>${escapeHtml(e.data || '-')}</td>
                 <td>${escapeHtml(e.descrizione || '-')}</td>
                 <td>${escapeHtml(e.totaleDare || '-')}</td>
                 <td>${escapeHtml(e.totaleAvere || '-')}</td>
-                <td>${escapeHtml(e.saldo || '-')}</td>
-                <td>${renderEntryActions(item.id, idx, true)}</td>
+                <td>${saldo}</td>
+                ${editMode ? `<td>${renderEntryActions(item.id, idx, true)}</td>` : ''}
             </tr>
+                `;
+            })()}
         `).join('');
         return `
             <div class="kv"><strong>Conto:</strong> ${escapeHtml(d.conto || '-')}</div>
             <table class="ledger-table" style="margin-top:6px;">
-                <thead><tr><th>Data</th><th>Descrizione</th><th>Totale Dare</th><th>Totale Avere</th><th>Saldo</th><th>Azioni voce</th></tr></thead>
-                <tbody>${rows || '<tr><td colspan="6">Nessuna voce.</td></tr>'}</tbody>
+                <thead><tr><th>Data</th><th>Descrizione</th><th>Totale Dare</th><th>Totale Avere</th><th>Saldo</th>${editMode ? '<th>Azioni voce</th>' : ''}</tr></thead>
+                <tbody>${rows || `<tr><td colspan="${editMode ? 6 : 5}">Nessuna voce.</td></tr>`}</tbody>
             </table>
         `;
     }
@@ -471,15 +534,52 @@ function renderItemBody(item) {
                 <td>${escapeHtml(e.dare || '-')}</td>
                 <td>${escapeHtml(e.avere || '-')}</td>
                 <td>${escapeHtml(e.descrizione || '-')}</td>
-                <td>${renderEntryActions(item.id, idx, true)}</td>
+                ${editMode ? `<td>${renderEntryActions(item.id, idx, true)}</td>` : ''}
             </tr>
         `).join('');
         return `
             <div class="kv"><strong>${escapeHtml(d.titolo || 'Libro Giornale')}</strong></div>
             <table class="ledger-table" style="margin-top:6px;">
-                <thead><tr><th>Data</th><th>Conto</th><th>Analisi</th><th>Dare</th><th>Avere</th><th>Descrizione</th><th>Azioni voce</th></tr></thead>
-                <tbody>${rows || '<tr><td colspan="7">Nessuna voce.</td></tr>'}</tbody>
+                <thead><tr><th>Data</th><th>Conto</th><th>Analisi</th><th>Dare</th><th>Avere</th><th>Descrizione</th>${editMode ? '<th>Azioni voce</th>' : ''}</tr></thead>
+                <tbody>${rows || `<tr><td colspan="${editMode ? 7 : 6}">Nessuna voce.</td></tr>`}</tbody>
             </table>
+        `;
+    }
+
+    if (item.type === 'bilancio') {
+        const ceRows = (d.ceEntries || []).map((e) => `
+            <tr>
+                <td>${escapeHtml(e.tipo || '-')}</td>
+                <td>${escapeHtml(e.conto || '-')}</td>
+                <td>${escapeHtml(e.importo || '-')}</td>
+            </tr>
+        `).join('');
+        const spRows = (d.spEntries || []).map((e) => `
+            <tr>
+                <td>${escapeHtml(e.tipo || '-')}</td>
+                <td>${escapeHtml(e.conto || '-')}</td>
+                <td>${escapeHtml(e.importo || '-')}</td>
+            </tr>
+        `).join('');
+
+        return `
+            <div class="kv"><strong>${escapeHtml(d.titolo || 'Conto Economico e Stato Patrimoniale')}</strong></div>
+            <div class="grid" style="margin-top:6px;">
+                <div>
+                    <div class="kv"><strong>Conto Economico</strong></div>
+                    <table class="ledger-table">
+                        <thead><tr><th>Tipo</th><th>Conto</th><th>Importo</th></tr></thead>
+                        <tbody>${ceRows || '<tr><td colspan="3">Nessuna riga CE.</td></tr>'}</tbody>
+                    </table>
+                </div>
+                <div>
+                    <div class="kv"><strong>Stato Patrimoniale</strong></div>
+                    <table class="ledger-table">
+                        <thead><tr><th>Tipo</th><th>Conto</th><th>Importo</th></tr></thead>
+                        <tbody>${spRows || '<tr><td colspan="3">Nessuna riga SP.</td></tr>'}</tbody>
+                    </table>
+                </div>
+            </div>
         `;
     }
 
@@ -493,6 +593,7 @@ function renderItemBody(item) {
 }
 
 function renderEntryActions(itemId, entryIndex, compact) {
+    if (!getSettings().editMode) return '';
     const cls = compact ? 'mini' : 'mini';
     return `
         <div class="entry-actions">
@@ -585,15 +686,11 @@ function buildTypeForm(type, data, mode) {
     }
 
     if (type === 'mastrino' && !entryOnly) {
+        const statoAuto = computeMastrinoStatus(data.entries || []);
         return `
             <div class="grid">
                 <div><label>Conto</label><input list="contoSuggestions" name="conto" value="${escapeHtml(data.conto)}" placeholder="Inizia a scrivere un conto"></div>
-                <div><label>Stato</label>
-                    <select name="stato">
-                        <option value="APERTO" ${data.stato === 'APERTO' ? 'selected' : ''}>APERTO</option>
-                        <option value="CHIUSO" ${data.stato === 'CHIUSO' ? 'selected' : ''}>CHIUSO</option>
-                    </select>
-                </div>
+                <div><label>Stato</label><input value="${statoAuto}" readonly></div>
             </div>
             ${accountsDatalist}
         `;
@@ -626,7 +723,6 @@ function buildTypeForm(type, data, mode) {
                 <div><label>Descrizione</label><input name="descrizione" value="${escapeHtml(data.descrizione || '')}"></div>
                 <div><label>Totale Dare</label><input name="totaleDare" value="${escapeHtml(data.totaleDare || '')}"></div>
                 <div><label>Totale Avere</label><input name="totaleAvere" value="${escapeHtml(data.totaleAvere || '')}"></div>
-                <div><label>Saldo (lascia vuoto per calcolo)</label><input name="saldo" value="${escapeHtml(data.saldo || '')}"></div>
             </div>
         `;
     }
@@ -635,6 +731,18 @@ function buildTypeForm(type, data, mode) {
         return `
             <div class="grid">
                 <div><label>Titolo blocco</label><input name="titolo" value="${escapeHtml(data.titolo || '')}"></div>
+            </div>
+        `;
+    }
+
+    if (type === 'bilancio' && !entryOnly) {
+        const ceCount = Array.isArray(data.ceEntries) ? data.ceEntries.length : 0;
+        const spCount = Array.isArray(data.spEntries) ? data.spEntries.length : 0;
+        return `
+            <div class="grid">
+                <div><label>Titolo blocco CE/SP</label><input name="titolo" value="${escapeHtml(data.titolo || '')}"></div>
+                <div><label>Righe CE (automatiche)</label><input value="${ceCount}" readonly></div>
+                <div><label>Righe SP (automatiche)</label><input value="${spCount}" readonly></div>
             </div>
         `;
     }
@@ -711,30 +819,39 @@ function collectFormData(type) {
 function saveItemFromModal() {
     const page = getCurrentPage();
     const data = collectFormData(editorState.type);
+    let touchedMastrino = null;
 
     if (editorState.mode === 'create') {
-        page.items.push({
+        const newItem = {
             id: uid('item'),
             type: editorState.type,
             data: buildInitialData(editorState.type, data)
-        });
+        };
+        page.items.push(newItem);
+        if (newItem.type === 'mastrino') touchedMastrino = newItem;
     } else if (editorState.mode === 'edit-item') {
         const target = page.items.find((x) => x.id === editorState.itemId);
         if (!target) return;
         updateItemMeta(target, data);
+        if (target.type === 'mastrino') touchedMastrino = target;
     } else if (editorState.mode === 'add-entry') {
         const target = page.items.find((x) => x.id === editorState.itemId);
         if (!target) return;
         target.data.entries.push(buildEntryFromForm(target.type, data));
+        if (target.type === 'mastrino') touchedMastrino = target;
     } else if (editorState.mode === 'edit-entry') {
         const target = page.items.find((x) => x.id === editorState.itemId);
         if (!target) return;
         const idx = editorState.entryIndex;
         if (idx === null || !target.data.entries[idx]) return;
         target.data.entries[idx] = buildEntryFromForm(target.type, data);
+        if (target.type === 'mastrino') touchedMastrino = target;
     }
 
     recalcDerivedFields(page);
+    if (touchedMastrino) {
+        syncBooksFromMastrino(page, touchedMastrino);
+    }
     saveState();
     closeItemEditor();
     renderAll();
@@ -752,13 +869,16 @@ function buildInitialData(type, raw) {
         };
     }
     if (type === 'mastrino') {
-        return { conto: raw.conto || '', stato: raw.stato || 'APERTO', entries: [defaultEntryByType('mastrino')] };
+        return { conto: raw.conto || '', stato: 'APERTO', entries: [defaultEntryByType('mastrino')] };
     }
     if (type === 'mastro') {
         return { conto: raw.conto || '', entries: [defaultEntryByType('mastro')] };
     }
     if (type === 'giornale') {
         return { titolo: raw.titolo || base.titolo, entries: [defaultEntryByType('giornale')] };
+    }
+    if (type === 'bilancio') {
+        return { titolo: raw.titolo || base.titolo, ceEntries: [], spEntries: [] };
     }
     return { titolo: raw.titolo || base.titolo, entries: [defaultEntryByType('note')] };
 }
@@ -771,7 +891,6 @@ function updateItemMeta(item, raw) {
     }
     if (item.type === 'mastrino') {
         item.data.conto = raw.conto || item.data.conto;
-        item.data.stato = raw.stato || item.data.stato;
     }
     if (item.type === 'mastro') {
         item.data.conto = raw.conto || item.data.conto;
@@ -780,6 +899,9 @@ function updateItemMeta(item, raw) {
         item.data.titolo = raw.titolo || item.data.titolo;
     }
     if (item.type === 'note') {
+        item.data.titolo = raw.titolo || item.data.titolo;
+    }
+    if (item.type === 'bilancio') {
         item.data.titolo = raw.titolo || item.data.titolo;
     }
 }
@@ -808,12 +930,13 @@ function buildEntryFromForm(type, raw) {
     if (type === 'mastro') {
         const dare = Number(raw.totaleDare || 0);
         const avere = Number(raw.totaleAvere || 0);
+        const bothEmpty = !String(raw.totaleDare || '').trim() && !String(raw.totaleAvere || '').trim();
         return {
             data: raw.data || '',
             descrizione: raw.descrizione || '',
             totaleDare: raw.totaleDare || '',
             totaleAvere: raw.totaleAvere || '',
-            saldo: raw.saldo || (dare - avere).toFixed(2)
+            saldo: bothEmpty ? '' : (dare - avere).toFixed(2)
         };
     }
     if (type === 'giornale') {
@@ -834,19 +957,30 @@ function buildEntryFromForm(type, raw) {
 function recalcDerivedFields(page) {
     page.items.forEach((item) => {
         if (item.type !== 'mastrino') return;
-        const entries = item.data.entries || [];
-        const td = entries.reduce((s, e) => s + Number(e.dare || 0), 0);
-        const ta = entries.reduce((s, e) => s + Number(e.avere || 0), 0);
-        const saldo = td - ta;
-        item.data.stato = Math.abs(saldo) < 0.0001 ? 'CHIUSO' : (item.data.stato || 'APERTO');
+        item.data.stato = computeMastrinoStatus(item.data.entries || []);
     });
+}
+
+function computeMastrinoStatus(entries) {
+    const td = entries.reduce((s, e) => s + Number(e.dare || 0), 0);
+    const ta = entries.reduce((s, e) => s + Number(e.avere || 0), 0);
+    const saldo = td - ta;
+    return Math.abs(saldo) < 0.0001 ? 'CHIUSO' : 'APERTO';
+}
+
+function recalcAllDerivedFields() {
+    state.pages.forEach((p) => recalcDerivedFields(p));
 }
 
 function deleteItem(itemId) {
     const page = getCurrentPage();
+    const target = page.items.find((x) => x.id === itemId);
     const ok = confirm('Eliminare questo oggetto?');
     if (!ok) return;
     page.items = page.items.filter((x) => x.id !== itemId);
+    if (target?.type === 'mastrino') {
+        removeAutoRefsForMastrino(page, target.id);
+    }
     saveState();
     renderAll();
 }
@@ -860,11 +994,39 @@ function moveItem(itemId, dir) {
     renderAll();
 }
 
+function addSideMastrino(itemId) {
+    const page = getCurrentPage();
+    const idx = page.items.findIndex((x) => x.id === itemId);
+    if (idx < 0) return;
+
+    const source = page.items[idx];
+    if (!source || source.type !== 'mastrino') return;
+
+    const newItem = {
+        id: uid('item'),
+        type: 'mastrino',
+        data: {
+            conto: source.data?.conto || '',
+            stato: 'APERTO',
+            entries: [defaultEntryByType('mastrino')]
+        }
+    };
+
+    page.items.splice(idx + 1, 0, newItem);
+    syncBooksFromMastrino(page, newItem);
+    saveState();
+    renderAll();
+}
+
 function moveEntry(itemId, entryIndex, dir) {
     const page = getCurrentPage();
     const item = page.items.find((x) => x.id === itemId);
     if (!item || !item.data?.entries) return;
     moveInArray(item.data.entries, entryIndex, entryIndex + dir);
+    if (item.type === 'mastrino') {
+        recalcDerivedFields(page);
+        syncBooksFromMastrino(page, item);
+    }
     saveState();
     renderAll();
 }
@@ -880,8 +1042,140 @@ function deleteEntry(itemId, entryIndex) {
         return;
     }
     item.data.entries.splice(entryIndex, 1);
+    if (item.type === 'mastrino') {
+        recalcDerivedFields(page);
+        syncBooksFromMastrino(page, item);
+    }
     saveState();
     renderAll();
+}
+
+function getSettings() {
+    return {
+        autoAddBooks: Boolean(state?.settings?.autoAddBooks),
+        autoUpdateBooks: Boolean(state?.settings?.autoUpdateBooks),
+        editMode: Boolean(state?.settings?.editMode)
+    };
+}
+
+function getOrCreateBook(page, type, createData, predicate) {
+    const settings = getSettings();
+    const matches = page.items.filter((x) => x.type === type && (!predicate || predicate(x)));
+    if (matches.length) return matches[0];
+    if (!settings.autoAddBooks) return null;
+
+    const data = createData();
+    const item = { id: uid('item'), type, data: { ...data, autoManaged: true } };
+    page.items.push(item);
+    return item;
+}
+
+function removeAutoRefsForMastrino(page, mastrinoId) {
+    page.items.forEach((item) => {
+        if (item.type === 'giornale') {
+            item.data.entries = (item.data.entries || []).filter((e) => e.autoRef !== mastrinoId);
+        }
+        if (item.type === 'mastro') {
+            item.data.entries = (item.data.entries || []).filter((e) => e.autoRef !== mastrinoId);
+        }
+        if (item.type === 'bilancio') {
+            item.data.ceEntries = (item.data.ceEntries || []).filter((e) => e.autoRef !== mastrinoId);
+            item.data.spEntries = (item.data.spEntries || []).filter((e) => e.autoRef !== mastrinoId);
+        }
+    });
+}
+
+function classifyForCeSp(conto, saldo) {
+    const name = String(conto || '').toLowerCase();
+    const absSaldo = Math.abs(saldo).toFixed(2);
+    if (/ricav|vendit|provent/.test(name)) {
+        return { area: 'CE', tipo: 'Ricavo', importo: absSaldo };
+    }
+    if (/costo|spes|ammort|salari|stipend|interess/.test(name)) {
+        return { area: 'CE', tipo: 'Costo', importo: absSaldo };
+    }
+    return { area: 'SP', tipo: saldo >= 0 ? 'Attivo' : 'Passivo', importo: absSaldo };
+}
+
+function syncBooksFromMastrino(page, mastrinoItem) {
+    const settings = getSettings();
+    if (!settings.autoAddBooks && !settings.autoUpdateBooks) return;
+
+    const mastrinoId = mastrinoItem.id;
+    const conto = mastrinoItem.data?.conto || 'Conto';
+    const entries = mastrinoItem.data?.entries || [];
+    const totalDare = entries.reduce((s, e) => s + Number(e.dare || 0), 0);
+    const totalAvere = entries.reduce((s, e) => s + Number(e.avere || 0), 0);
+    const saldo = totalDare - totalAvere;
+
+    const giornale = getOrCreateBook(
+        page,
+        'giornale',
+        () => ({ titolo: 'Libro Giornale (auto)', entries: [] }),
+        (x) => x.data?.autoManaged || !settings.autoAddBooks
+    );
+    if (giornale && (settings.autoUpdateBooks || settings.autoAddBooks)) {
+        giornale.data.entries = (giornale.data.entries || []).filter((e) => e.autoRef !== mastrinoId);
+        entries.forEach((e) => {
+            const dare = Number(e.dare || 0);
+            const avere = Number(e.avere || 0);
+            if (dare === 0 && avere === 0) return;
+            giornale.data.entries.push({
+                data: e.data || new Date().toLocaleDateString('it-IT'),
+                conto,
+                analisi: dare > 0 && avere === 0 ? 'VFA' : (avere > 0 && dare === 0 ? 'VFP' : 'MIX'),
+                dare: dare ? dare.toFixed(2) : '',
+                avere: avere ? avere.toFixed(2) : '',
+                descrizione: `[AUTO da mastrino] ${e.descrizione || ''}`.trim(),
+                autoRef: mastrinoId
+            });
+        });
+    }
+
+    const mastro = getOrCreateBook(
+        page,
+        'mastro',
+        () => ({ conto, entries: [] }),
+        (x) => (x.data?.conto || '').toLowerCase() === String(conto).toLowerCase() || x.data?.autoManaged
+    );
+    if (mastro && (settings.autoUpdateBooks || settings.autoAddBooks)) {
+        mastro.data.conto = mastro.data.conto || conto;
+        mastro.data.entries = (mastro.data.entries || []).filter((e) => e.autoRef !== mastrinoId);
+        mastro.data.entries.push({
+            data: new Date().toLocaleDateString('it-IT'),
+            descrizione: '[AUTO da mastrino]',
+            totaleDare: totalDare.toFixed(2),
+            totaleAvere: totalAvere.toFixed(2),
+            saldo: saldo.toFixed(2),
+            autoRef: mastrinoId
+        });
+    }
+
+    const bilancio = getOrCreateBook(
+        page,
+        'bilancio',
+        () => ({ titolo: 'Conto Economico e Stato Patrimoniale (auto)', ceEntries: [], spEntries: [] }),
+        (x) => x.data?.autoManaged || !settings.autoAddBooks
+    );
+    if (bilancio && (settings.autoUpdateBooks || settings.autoAddBooks)) {
+        bilancio.data.ceEntries = (bilancio.data.ceEntries || []).filter((e) => e.autoRef !== mastrinoId);
+        bilancio.data.spEntries = (bilancio.data.spEntries || []).filter((e) => e.autoRef !== mastrinoId);
+
+        if (Math.abs(saldo) >= 0.0001) {
+            const cls = classifyForCeSp(conto, saldo);
+            const row = { tipo: cls.tipo, conto, importo: cls.importo, autoRef: mastrinoId };
+            if (cls.area === 'CE') bilancio.data.ceEntries.push(row);
+            if (cls.area === 'SP') bilancio.data.spEntries.push(row);
+        }
+    }
+}
+
+function syncAllMastrini() {
+    state.pages.forEach((page) => {
+        page.items
+            .filter((item) => item.type === 'mastrino')
+            .forEach((mastrino) => syncBooksFromMastrino(page, mastrino));
+    });
 }
 
 function onRootClick(e) {
@@ -898,6 +1192,7 @@ function onRootClick(e) {
     if (action === 'item-delete') deleteItem(id);
     if (action === 'item-up') moveItem(id, -1);
     if (action === 'item-down') moveItem(id, 1);
+    if (action === 'item-add-side-mastrino') addSideMastrino(id);
     if (action === 'item-add-entry') {
         const page = getCurrentPage();
         const item = page.items.find((x) => x.id === id);
@@ -931,6 +1226,40 @@ function bindEvents() {
         openItemEditor('create', type);
     });
 
+    const autoAdd = document.getElementById('autoAddBooks');
+    const autoUpdate = document.getElementById('autoUpdateBooks');
+    if (autoAdd && autoUpdate) {
+        autoAdd.checked = getSettings().autoAddBooks;
+        autoUpdate.checked = getSettings().autoUpdateBooks;
+        const editModeInput = document.getElementById('editMode');
+        if (editModeInput) {
+            editModeInput.checked = getSettings().editMode;
+            editModeInput.addEventListener('change', () => {
+                state.settings.editMode = editModeInput.checked;
+                saveState();
+                renderAll();
+            });
+        }
+
+        autoAdd.addEventListener('change', () => {
+            state.settings.autoAddBooks = autoAdd.checked;
+            if (state.settings.autoAddBooks || state.settings.autoUpdateBooks) {
+                syncAllMastrini();
+            }
+            saveState();
+            renderAll();
+        });
+
+        autoUpdate.addEventListener('change', () => {
+            state.settings.autoUpdateBooks = autoUpdate.checked;
+            if (state.settings.autoAddBooks || state.settings.autoUpdateBooks) {
+                syncAllMastrini();
+            }
+            saveState();
+            renderAll();
+        });
+    }
+
     document.getElementById('saveItemBtn').addEventListener('click', saveItemFromModal);
     document.getElementById('cancelItemBtn').addEventListener('click', closeItemEditor);
     document.getElementById('closeModalBtn').addEventListener('click', closeItemEditor);
@@ -941,6 +1270,7 @@ function bindEvents() {
 }
 
 function renderAll() {
+    recalcAllDerivedFields();
     renderPagesList();
     renderMain();
 }
