@@ -73,10 +73,10 @@ function defaultDataByType(type) {
 function defaultEntryByType(type) {
     if (type === 'analisi') {
         return {
-            seE: '',
-            seU: '',
-            sfE: '',
-            sfU: ''
+            seEimporto: '', seEconto: '', seEdescrizione: '', seEcodice: '',
+            seUimporto: '', seUconto: '', seUdescrizione: '', seUcodice: '',
+            sfEimporto: '', sfEconto: '', sfEdescrizione: '', sfEcodice: '',
+            sfUimporto: '', sfUconto: '', sfUdescrizione: '', sfUcodice: ''
         };
     }
     if (type === 'mastrino') {
@@ -167,14 +167,22 @@ function normalizeItem(item) {
     const base = defaultDataByType(type);
 
     if (type === 'analisi') {
-        const isNewFormat = (e) => 'seE' in e || 'seU' in e || 'sfE' in e || 'sfU' in e;
-        const isOldFormat = (e) => 'eImporto' in e || 'uImporto' in e;
+        const isNewFormat = (e) => 'seEimporto' in e || 'seUimporto' in e || 'sfEimporto' in e || 'sfUimporto' in e;
+        const isOldFormat4 = (e) => 'seE' in e || 'seU' in e || 'sfE' in e || 'sfU' in e;
+        const isOldFormat8 = (e) => 'eImporto' in e || 'uImporto' in e;
         
-        const migrateOldEntry = (oldE) => ({
-            seE: oldE.eImporto || '',
-            seU: oldE.uImporto || '',
-            sfE: '',
-            sfU: ''
+        const migrateFrom4 = (oldE) => ({
+            seEimporto: oldE.seE || '', seEconto: '', seEdescrizione: '', seEcodice: 'VFA',
+            seUimporto: oldE.seU || '', seUconto: '', seUdescrizione: '', seUcodice: 'VFP',
+            sfEimporto: oldE.sfE || '', sfEconto: '', sfEdescrizione: '', sfEcodice: 'VEP',
+            sfUimporto: oldE.sfU || '', sfUconto: '', sfUdescrizione: '', sfUcodice: 'VEN'
+        });
+        
+        const migrateFrom8 = (oldE) => ({
+            seEimporto: oldE.eImporto || '', seEconto: oldE.eDescrizione || '', seEdescrizione: '', seEcodice: oldE.eVariazione || 'VFA',
+            seUimporto: oldE.uImporto || '', seUconto: oldE.uDescrizione || '', seUdescrizione: '', seUcodice: oldE.uVariazione || 'VFP',
+            sfEimporto: '', sfEconto: '', sfEdescrizione: '', sfEcodice: 'VEP',
+            sfUimporto: '', sfUconto: '', sfUdescrizione: '', sfUcodice: 'VEN'
         });
         
         return {
@@ -184,12 +192,16 @@ function normalizeItem(item) {
                 titolo: data.titolo || base.titolo,
                 entries: (data.entries && data.entries.length ? data.entries : [defaultEntryByType('analisi')]).map((e) => {
                     if (isNewFormat(e)) {
-                        return { seE: e.seE || '', seU: e.seU || '', sfE: e.sfE || '', sfU: e.sfU || '' };
+                        return {
+                            seEimporto: e.seEimporto || '', seEconto: e.seEconto || '', seEdescrizione: e.seEdescrizione || '', seEcodice: e.seEcodice || '',
+                            seUimporto: e.seUimporto || '', seUconto: e.seUconto || '', seUdescrizione: e.seUdescrizione || '', seUcodice: e.seUcodice || '',
+                            sfEimporto: e.sfEimporto || '', sfEconto: e.sfEconto || '', sfEdescrizione: e.sfEdescrizione || '', sfEcodice: e.sfEcodice || '',
+                            sfUimporto: e.sfUimporto || '', sfUconto: e.sfUconto || '', sfUdescrizione: e.sfUdescrizione || '', sfUcodice: e.sfUcodice || ''
+                        };
                     }
-                    if (isOldFormat(e)) {
-                        return migrateOldEntry(e);
-                    }
-                    return { seE: '', seU: '', sfE: '', sfU: '' };
+                    if (isOldFormat4(e)) return migrateFrom4(e);
+                    if (isOldFormat8(e)) return migrateFrom8(e);
+                    return defaultEntryByType('analisi');
                 })
             }
         };
@@ -431,13 +443,13 @@ function renderItemBody(item) {
                     <tbody>
                         <tr>
                             <td><strong>SE</strong></td>
-                            <td>${escapeHtml(r.seE || '-')}</td>
-                            <td>${escapeHtml(r.seU || '-')}</td>
+                            <td>${escapeHtml(r.seEimporto || '-')} <small>${escapeHtml(r.seEconto || '')}</small></td>
+                            <td>${escapeHtml(r.seUimporto || '-')} <small>${escapeHtml(r.seUconto || '')}</small></td>
                         </tr>
                         <tr>
                             <td><strong>SF</strong></td>
-                            <td>${escapeHtml(r.sfE || '-')}</td>
-                            <td>${escapeHtml(r.sfU || '-')}</td>
+                            <td>${escapeHtml(r.sfEimporto || '-')} <small>${escapeHtml(r.sfEconto || '')}</small></td>
+                            <td>${escapeHtml(r.sfUimporto || '-')} <small>${escapeHtml(r.sfUconto || '')}</small></td>
                         </tr>
                     </tbody>
                 </table>
@@ -664,23 +676,36 @@ function buildTypeForm(type, data, mode) {
 
     if (type === 'analisi' && entryOnly) {
         return `
-            <table class="analysis-matrix">
-                <thead>
-                    <tr><th></th><th>E</th><th>U</th></tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td><strong>SE</strong></td>
-                        <td><input name="seE" value="${escapeHtml(data.seE || '')}" placeholder="importo"></td>
-                        <td><input name="seU" value="${escapeHtml(data.seU || '')}" placeholder="importo"></td>
-                    </tr>
-                    <tr>
-                        <td><strong>SF</strong></td>
-                        <td><input name="sfE" value="${escapeHtml(data.sfE || '')}" placeholder="importo"></td>
-                        <td><input name="sfU" value="${escapeHtml(data.sfU || '')}" placeholder="importo"></td>
-                    </tr>
-                </tbody>
-            </table>
+            <fieldset style="border:1px solid #cbd5e1; border-radius:8px; padding:10px; margin-bottom:10px;">
+                <legend style="font-weight:700; font-size:0.9rem;">SE (Situazione Economica)</legend>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;">
+                    <div><label style="font-weight:700; font-size:0.75rem;">E - Importo</label><input name="seEimporto" value="${escapeHtml(data.seEimporto || '')}" placeholder="123.45"></div>
+                    <div><label style="font-weight:700; font-size:0.75rem;">E - Conto</label><input name="seEconto" value="${escapeHtml(data.seEconto || '')}" placeholder="Attivo"></div>
+                    <div><label style="font-weight:700; font-size:0.75rem;">E - Descrizione</label><input name="seEdescrizione" value="${escapeHtml(data.seEdescrizione || '')}"></div>
+                    <div><label style="font-weight:700; font-size:0.75rem;">E - Codice</label><input name="seEcodice" value="${escapeHtml(data.seEcodice || '')}" placeholder="VFA"></div>
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                    <div><label style="font-weight:700; font-size:0.75rem;">U - Importo</label><input name="seUimporto" value="${escapeHtml(data.seUimporto || '')}" placeholder="123.45"></div>
+                    <div><label style="font-weight:700; font-size:0.75rem;">U - Conto</label><input name="seUconto" value="${escapeHtml(data.seUconto || '')}" placeholder="Passivo"></div>
+                    <div><label style="font-weight:700; font-size:0.75rem;">U - Descrizione</label><input name="seUdescrizione" value="${escapeHtml(data.seUdescrizione || '')}"></div>
+                    <div><label style="font-weight:700; font-size:0.75rem;">U - Codice</label><input name="seUcodice" value="${escapeHtml(data.seUcodice || '')}" placeholder="VFP"></div>
+                </div>
+            </fieldset>
+            <fieldset style="border:1px solid #cbd5e1; border-radius:8px; padding:10px;">
+                <legend style="font-weight:700; font-size:0.9rem;">SF (Situazione Finanziaria)</legend>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;">
+                    <div><label style="font-weight:700; font-size:0.75rem;">E - Importo</label><input name="sfEimporto" value="${escapeHtml(data.sfEimporto || '')}" placeholder="123.45"></div>
+                    <div><label style="font-weight:700; font-size:0.75rem;">E - Conto</label><input name="sfEconto" value="${escapeHtml(data.sfEconto || '')}" placeholder="Ricavo"></div>
+                    <div><label style="font-weight:700; font-size:0.75rem;">E - Descrizione</label><input name="sfEdescrizione" value="${escapeHtml(data.sfEdescrizione || '')}"></div>
+                    <div><label style="font-weight:700; font-size:0.75rem;">E - Codice</label><input name="sfEcodice" value="${escapeHtml(data.sfEcodice || '')}" placeholder="VEP"></div>
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                    <div><label style="font-weight:700; font-size:0.75rem;">U - Importo</label><input name="sfUimporto" value="${escapeHtml(data.sfUimporto || '')}" placeholder="123.45"></div>
+                    <div><label style="font-weight:700; font-size:0.75rem;">U - Conto</label><input name="sfUconto" value="${escapeHtml(data.sfUconto || '')}" placeholder="Costo"></div>
+                    <div><label style="font-weight:700; font-size:0.75rem;">U - Descrizione</label><input name="sfUdescrizione" value="${escapeHtml(data.sfUdescrizione || '')}"></div>
+                    <div><label style="font-weight:700; font-size:0.75rem;">U - Codice</label><input name="sfUcodice" value="${escapeHtml(data.sfUcodice || '')}" placeholder="VEN"></div>
+                </div>
+            </fieldset>
         `;
     }
 
@@ -1121,47 +1146,47 @@ function extractMovementsFromAnalysis(analysisItem) {
 
     rows.forEach((r) => {
         // SE-E movement
-        if (r.seE && Number(r.seE) !== 0) {
+        const seEamt = parseAmount(r.seEimporto);
+        if (seEamt > 0 && r.seEconto) {
             out.push({
-                conto: 'Attivo/SE-E',
-                code: 'VFA',
-                amount: Math.abs(Number(r.seE)),
-                descrizione: `Analisi SE (E side): ${r.seE}`,
-                side: 'SE-E',
-                sign: Number(r.seE) > 0 ? '+' : '-'
+                conto: r.seEconto,
+                code: normalizeVarCode(r.seEcodice, '+'),
+                amount: seEamt,
+                descrizione: r.seEdescrizione || `SE-E da Analisi`,
+                side: 'SE-E'
             });
         }
         // SE-U movement
-        if (r.seU && Number(r.seU) !== 0) {
+        const seUamt = parseAmount(r.seUimporto);
+        if (seUamt > 0 && r.seUconto) {
             out.push({
-                conto: 'Passivo/SE-U',
-                code: 'VFP',
-                amount: Math.abs(Number(r.seU)),
-                descrizione: `Analisi SE (U side): ${r.seU}`,
-                side: 'SE-U',
-                sign: Number(r.seU) > 0 ? '+' : '-'
+                conto: r.seUconto,
+                code: normalizeVarCode(r.seUcodice, '-'),
+                amount: seUamt,
+                descrizione: r.seUdescrizione || `SE-U da Analisi`,
+                side: 'SE-U'
             });
         }
         // SF-E movement
-        if (r.sfE && Number(r.sfE) !== 0) {
+        const sfEamt = parseAmount(r.sfEimporto);
+        if (sfEamt > 0 && r.sfEconto) {
             out.push({
-                conto: 'Ricavo/SF-E',
-                code: 'VEP',
-                amount: Math.abs(Number(r.sfE)),
-                descrizione: `Analisi SF (E side): ${r.sfE}`,
-                side: 'SF-E',
-                sign: Number(r.sfE) > 0 ? '+' : '-'
+                conto: r.sfEconto,
+                code: normalizeVarCode(r.sfEcodice, '+'),
+                amount: sfEamt,
+                descrizione: r.sfEdescrizione || `SF-E da Analisi`,
+                side: 'SF-E'
             });
         }
         // SF-U movement
-        if (r.sfU && Number(r.sfU) !== 0) {
+        const sfUamt = parseAmount(r.sfUimporto);
+        if (sfUamt > 0 && r.sfUconto) {
             out.push({
-                conto: 'Costo/SF-U',
-                code: 'VEN',
-                amount: Math.abs(Number(r.sfU)),
-                descrizione: `Analisi SF (U side): ${r.sfU}`,
-                side: 'SF-U',
-                sign: Number(r.sfU) > 0 ? '+' : '-'
+                conto: r.sfUconto,
+                code: normalizeVarCode(r.sfUcodice, '-'),
+                amount: sfUamt,
+                descrizione: r.sfUdescrizione || `SF-U da Analisi`,
+                side: 'SF-U'
             });
         }
     });
