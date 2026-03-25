@@ -65,6 +65,27 @@
             margin-top: 8px;
         }
 
+        .exercise-manager {
+            margin-bottom: 15px;
+            padding: 12px;
+            background: #f6f8fa;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+        }
+
+        .exercise-manager h3 {
+            margin: 0 0 10px 0;
+            font-size: 0.95rem;
+            color: var(--secondary);
+        }
+
+        .exercise-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr auto auto auto;
+            gap: 8px;
+            align-items: end;
+        }
+
         .tx-list {
             margin-top: 10px;
             border: 1px solid #e6e6e6;
@@ -90,9 +111,15 @@
             color: #6b7280;
         }
 
-        .hint {
+        .hint-wrap {
+            position: relative;
             display: inline-block;
             margin-left: 6px;
+            vertical-align: middle;
+            overflow: visible;
+        }
+
+        .hint {
             width: 18px;
             height: 18px;
             line-height: 18px;
@@ -103,6 +130,49 @@
             font-size: 12px;
             font-weight: bold;
             cursor: help;
+            border: 1px solid #d1d5db;
+            padding: 0;
+        }
+
+        .hint-bubble {
+            display: none;
+            position: absolute;
+            z-index: 9999;
+            top: 24px;
+            left: 0;
+            width: min(340px, 80vw);
+            background: #111827;
+            color: #f9fafb;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 0.78rem;
+            line-height: 1.35;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+            white-space: pre-line;
+        }
+
+        .hint-wrap:hover .hint-bubble,
+        .hint-wrap:focus-within .hint-bubble {
+            display: block;
+        }
+
+        .tx-item.missing-map {
+            text-decoration: underline wavy #e11d48 2px;
+            text-underline-offset: 4px;
+            background: #fff1f2;
+        }
+
+        .tx-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 6px;
+        }
+
+        .tx-actions button {
+            padding: 4px 8px;
+            font-size: 0.72rem;
+            background: #475569;
         }
 
         .study-note {
@@ -332,6 +402,7 @@
             body { padding: 8px; }
             .panel { padding: 12px; margin-bottom: 15px; border-radius: 8px; }
             .builder-grid, .grid-form, .bilancio-grid, .mastrini-wrapper { grid-template-columns: 1fr; }
+            .exercise-row { grid-template-columns: 1fr; }
             .step-nav { grid-template-columns: 1fr 1fr; }
             #stepCounter { grid-column: 1 / -1; order: -1; }
             .journal-table thead { display: none; }
@@ -353,6 +424,23 @@
 
         <div class="panel">
             <h2>Editor Esercizio Multi-Step</h2>
+            <div class="exercise-manager">
+                <h3>Gestione Esercizi Salvati</h3>
+                <div class="exercise-row">
+                    <div>
+                        <label for="exerciseSelector">Esercizio</label>
+                        <select id="exerciseSelector" onchange="onExerciseSelectionChange(this.value)"></select>
+                    </div>
+                    <div>
+                        <label for="exerciseName">Nome esercizio</label>
+                        <input id="exerciseName" type="text" placeholder="Es. Esercizio 25 marzo" oninput="updateCurrentExerciseName(this.value)">
+                    </div>
+                    <button class="btn-example" onclick="createNewExercise()">Nuovo esercizio</button>
+                    <button class="btn-secondary" onclick="saveExerciseNow()">Salva modifiche</button>
+                    <button class="btn-danger" onclick="deleteCurrentExercise()">Cancella esercizio</button>
+                </div>
+            </div>
+
             <div class="builder-grid">
                 <div>
                     <label for="editorTitle">Titolo step</label>
@@ -376,14 +464,34 @@
                     <datalist id="contiApertiList"></datalist>
                 </div>
                 <div>
-                    <label for="txSezione">Sezione<span class="hint" title="Ordine logico consigliato: 1) Capitalizzazione, 2) Liquidazione.&#10;Capitalizzazione: effetti su conti patrimoniali/finanziari.&#10;Liquidazione: effetti economici di costo/ricavo.">?</span></label>
+                    <label for="txSezione">Sezione</label>
+                    <span class="hint-wrap">
+                        <button type="button" class="hint" aria-label="Info sezione">?</button>
+                        <span class="hint-bubble">Ordine logico consigliato:
+1) Capitalizzazione
+2) Liquidazione
+
+Capitalizzazione: effetti su conti patrimoniali e finanziari.
+Liquidazione: effetti economici di costo/ricavo.</span>
+                    </span>
                     <select id="txSezione">
                         <option value="capitalizzazione">Capitalizzazione</option>
                         <option value="liquidazione">Liquidazione</option>
                     </select>
                 </div>
                 <div>
-                    <label for="txTipoVar">Analisi<span class="hint" title="Sigle da ricordare:&#10;VFA = Variazione Finanziaria Attiva (cassa/banche/crediti aumentano)&#10;VFP = Variazione Finanziaria Passiva (debiti o uscite)&#10;VEN = Variazione Economica Negativa (costi)&#10;VEP = Variazione Economica Positiva (ricavi)&#10;Regola rapida: VFA e VEN in Dare, VFP e VEP in Avere.">?</span></label>
+                    <label for="txTipoVar">Analisi</label>
+                    <span class="hint-wrap">
+                        <button type="button" class="hint" aria-label="Info analisi">?</button>
+                        <span class="hint-bubble">Sigle da ricordare:
+VFA = Variazione Finanziaria Attiva
+VFP = Variazione Finanziaria Passiva
+VEN = Variazione Economica Negativa
+VEP = Variazione Economica Positiva
+
+Regola rapida:
+VFA e VEN in Dare, VFP e VEP in Avere.</span>
+                    </span>
                     <select id="txTipoVar">
                         <option value="VFA">VFA</option>
                         <option value="VFP">VFP</option>
@@ -392,7 +500,15 @@
                     </select>
                 </div>
                 <div>
-                    <label for="txCategoria">Prospetto<span class="hint" title="SP = Stato Patrimoniale (attivo/passivo).&#10;CE = Conto Economico (costi/ricavi e risultato).&#10;Conti numerari/patrimoniali vanno in SP; conti di reddito in CE.">?</span></label>
+                    <label for="txCategoria">Prospetto</label>
+                    <span class="hint-wrap">
+                        <button type="button" class="hint" aria-label="Info prospetto">?</button>
+                        <span class="hint-bubble">SP = Stato Patrimoniale (attivo/passivo)
+CE = Conto Economico (costi/ricavi e risultato)
+
+Conti numerari/patrimoniali in SP.
+Conti di reddito in CE.</span>
+                    </span>
                     <select id="txCategoria">
                         <option value="SP">SP</option>
                         <option value="CE">CE</option>

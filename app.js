@@ -3,7 +3,10 @@ let transazioni = [];
 let conti = {};
 let contiRiferimento = {};
 let esercizio = [];
+let exerciseLibrary = [];
+let currentExerciseId = null;
 const STORAGE_KEY = 'accountingLab.esercizio.v1';
+const STORAGE_LIBRARY_KEY = 'accountingLab.library.v2';
 let autosaveBound = false;
 
 function phaseClass(fase) {
@@ -45,6 +48,18 @@ function ensureStepStructures(step) {
     if (!step.liquidazione) {
         step.liquidazione = { descrizione: '', transazioni: [] };
     }
+}
+
+function normalizeTransaction(tx, defaultSection) {
+    const importo = Number(tx?.importo);
+    return {
+        conto: String(tx?.conto || tx?.nome || '').trim(),
+        sezione: tx?.sezione === 'liquidazione' ? 'liquidazione' : (defaultSection || 'capitalizzazione'),
+        tipoVar: ['VFA', 'VFP', 'VEN', 'VEP'].includes(tx?.tipoVar) ? tx.tipoVar : 'VFA',
+        importo: Number.isFinite(importo) ? importo : 0,
+        categoria: tx?.categoria === 'CE' ? 'CE' : 'SP',
+        descrizione: String(tx?.descrizione || '').trim()
+    };
 }
 
 function loadCasoDeltaExample() {
@@ -140,85 +155,245 @@ function loadCasoDeltaExample() {
     ];
 
     currentStep = 0;
+    updateCurrentExerciseName('Caso Delta');
     saveToLocalStorage();
     renderStep();
 }
 
-function saveToLocalStorage() {
-    const payload = {
-        version: 1,
-        currentStep,
-        esercizio
-    };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
-}
+function normalizeExerciseData(data) {
+    if (!data || !Array.isArray(data.esercizio) || data.esercizio.length === 0) {
+        return { currentStep: 0, esercizio: [nuovoStep()] };
+    }
 
-function loadFromLocalStorage() {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return false;
+    const normalizedSteps = data.esercizio.map((step) => {
+        const fallback = nuovoStep();
+        const hasNewFormat = step && step.capitalizzazione && step.liquidazione;
 
-    try {
-        const data = JSON.parse(raw);
-        if (!data || !Array.isArray(data.esercizio) || data.esercizio.length === 0) {
-            return false;
-        }
-
-        esercizio = data.esercizio.map((step) => {
-            const fallback = nuovoStep();
-            const hasNewFormat = step && step.capitalizzazione && step.liquidazione;
-
-            if (hasNewFormat) {
-                return {
-                    ...fallback,
-                    ...step,
-                    capitalizzazione: {
-                        descrizione: step.capitalizzazione?.descrizione || '',
-                        transazioni: Array.isArray(step.capitalizzazione?.transazioni) ? step.capitalizzazione.transazioni : []
-                    },
-                    liquidazione: {
-                        descrizione: step.liquidazione?.descrizione || '',
-                        transazioni: Array.isArray(step.liquidazione?.transazioni) ? step.liquidazione.transazioni : []
-                    },
-                    reportManual: {
-                        giornale: step.reportManual?.giornale || '',
-                        mastrini: step.reportManual?.mastrini || '',
-                        ce: step.reportManual?.ce || '',
-                        sp: step.reportManual?.sp || '',
-                        bilancio: step.reportManual?.bilancio || ''
-                    }
-                };
-            }
-
-            const oldPhase = step && step.fase === 'Liquidazione' ? 'liquidazione' : 'capitalizzazione';
-            const oldTx = Array.isArray(step?.transazioni) ? step.transazioni : [];
+        if (hasNewFormat) {
             return {
                 ...fallback,
                 ...step,
                 capitalizzazione: {
-                    descrizione: oldPhase === 'capitalizzazione' ? (step?.descrizione || '') : '',
-                    transazioni: oldPhase === 'capitalizzazione' ? oldTx : []
+                    descrizione: step.capitalizzazione?.descrizione || '',
+                    transazioni: Array.isArray(step.capitalizzazione?.transazioni)
+                        ? step.capitalizzazione.transazioni.map((tx) => normalizeTransaction(tx, 'capitalizzazione'))
+                        : []
                 },
                 liquidazione: {
-                    descrizione: oldPhase === 'liquidazione' ? (step?.descrizione || '') : '',
-                    transazioni: oldPhase === 'liquidazione' ? oldTx : []
+                    descrizione: step.liquidazione?.descrizione || '',
+                    transazioni: Array.isArray(step.liquidazione?.transazioni)
+                        ? step.liquidazione.transazioni.map((tx) => normalizeTransaction(tx, 'liquidazione'))
+                        : []
                 },
                 reportManual: {
-                    giornale: '',
-                    mastrini: '',
-                    ce: '',
-                    sp: '',
-                    bilancio: ''
+                    giornale: step.reportManual?.giornale || '',
+                    mastrini: step.reportManual?.mastrini || '',
+                    ce: step.reportManual?.ce || '',
+                    sp: step.reportManual?.sp || '',
+                    bilancio: step.reportManual?.bilancio || ''
                 }
             };
-        });
+        }
 
-        const savedStep = Number.isInteger(data.currentStep) ? data.currentStep : 0;
-        currentStep = Math.max(0, Math.min(savedStep, esercizio.length - 1));
+        const oldPhase = step && step.fase === 'Liquidazione' ? 'liquidazione' : 'capitalizzazione';
+        const oldTx = Array.isArray(step?.transazioni)
+            ? step.transazioni.map((tx) => normalizeTransaction(tx, oldPhase))
+            : [];
+        return {
+            ...fallback,
+            ...step,
+            capitalizzazione: {
+                descrizione: oldPhase === 'capitalizzazione' ? (step?.descrizione || '') : '',
+                transazioni: oldPhase === 'capitalizzazione' ? oldTx : []
+            },
+            liquidazione: {
+                descrizione: oldPhase === 'liquidazione' ? (step?.descrizione || '') : '',
+                transazioni: oldPhase === 'liquidazione' ? oldTx : []
+            },
+            reportManual: {
+                giornale: '',
+                mastrini: '',
+                ce: '',
+                sp: '',
+                bilancio: ''
+            }
+        };
+    });
+
+    const savedStep = Number.isInteger(data.currentStep) ? data.currentStep : 0;
+    return {
+        currentStep: Math.max(0, Math.min(savedStep, normalizedSteps.length - 1)),
+        esercizio: normalizedSteps
+    };
+}
+
+function saveToLocalStorage() {
+    if (!currentExerciseId) {
+        currentExerciseId = `ex-${Date.now()}`;
+    }
+
+    const exerciseName = ($('#exerciseName').val() || '').trim() || `Esercizio ${new Date().toLocaleDateString('it-IT')}`;
+    const payload = {
+        id: currentExerciseId,
+        name: exerciseName,
+        updatedAt: Date.now(),
+        currentStep,
+        esercizio
+    };
+
+    const idx = exerciseLibrary.findIndex((x) => x.id === currentExerciseId);
+    if (idx >= 0) {
+        exerciseLibrary[idx] = payload;
+    } else {
+        exerciseLibrary.push(payload);
+    }
+
+    localStorage.setItem(STORAGE_LIBRARY_KEY, JSON.stringify({
+        version: 2,
+        currentExerciseId,
+        exercises: exerciseLibrary
+    }));
+
+    renderExerciseManagerUI();
+}
+
+function loadFromLocalStorage() {
+    const rawLibrary = localStorage.getItem(STORAGE_LIBRARY_KEY);
+
+    if (rawLibrary) {
+        try {
+            const libraryData = JSON.parse(rawLibrary);
+            if (libraryData && Array.isArray(libraryData.exercises) && libraryData.exercises.length) {
+                exerciseLibrary = libraryData.exercises;
+                currentExerciseId = libraryData.currentExerciseId || exerciseLibrary[0].id;
+                const currentRecord = exerciseLibrary.find((x) => x.id === currentExerciseId) || exerciseLibrary[0];
+                currentExerciseId = currentRecord.id;
+                const normalized = normalizeExerciseData(currentRecord);
+                esercizio = normalized.esercizio;
+                currentStep = normalized.currentStep;
+                return true;
+            }
+        } catch (error) {
+            console.warn('Libreria esercizi non valida, provo migrazione legacy.', error);
+        }
+    }
+
+    const legacyRaw = localStorage.getItem(STORAGE_KEY);
+    if (!legacyRaw) {
+        exerciseLibrary = [];
+        currentExerciseId = null;
+        return false;
+    }
+
+    try {
+        const legacy = JSON.parse(legacyRaw);
+        const normalized = normalizeExerciseData(legacy);
+        currentExerciseId = `ex-${Date.now()}`;
+        exerciseLibrary = [{
+            id: currentExerciseId,
+            name: 'Esercizio migrato',
+            updatedAt: Date.now(),
+            currentStep: normalized.currentStep,
+            esercizio: normalized.esercizio
+        }];
+        esercizio = normalized.esercizio;
+        currentStep = normalized.currentStep;
+        saveToLocalStorage();
         return true;
     } catch (error) {
         console.warn('LocalStorage non valido, inizializzo nuovo esercizio.', error);
         return false;
     }
+}
+
+function renderExerciseManagerUI() {
+    const selector = document.getElementById('exerciseSelector');
+    const nameInput = document.getElementById('exerciseName');
+    if (!selector || !nameInput) return;
+
+    selector.innerHTML = exerciseLibrary
+        .map((x) => `<option value="${x.id}">${x.name || 'Esercizio senza nome'}</option>`)
+        .join('');
+    selector.value = currentExerciseId || '';
+
+    const current = exerciseLibrary.find((x) => x.id === currentExerciseId);
+    nameInput.value = current?.name || '';
+}
+
+function onExerciseSelectionChange(id) {
+    if (!id || id === currentExerciseId) return;
+    syncCurrentStepFromEditor();
+    saveToLocalStorage();
+
+    const selected = exerciseLibrary.find((x) => x.id === id);
+    if (!selected) return;
+    currentExerciseId = selected.id;
+    const normalized = normalizeExerciseData(selected);
+    esercizio = normalized.esercizio;
+    currentStep = normalized.currentStep;
+    renderStep();
+}
+
+function updateCurrentExerciseName(name) {
+    const idx = exerciseLibrary.findIndex((x) => x.id === currentExerciseId);
+    if (idx >= 0) {
+        exerciseLibrary[idx].name = name.trim() || 'Esercizio senza nome';
+        localStorage.setItem(STORAGE_LIBRARY_KEY, JSON.stringify({
+            version: 2,
+            currentExerciseId,
+            exercises: exerciseLibrary
+        }));
+        renderExerciseManagerUI();
+    }
+}
+
+function createNewExercise() {
+    syncCurrentStepFromEditor();
+    saveToLocalStorage();
+
+    currentExerciseId = `ex-${Date.now()}`;
+    currentStep = 0;
+    esercizio = [nuovoStep()];
+    exerciseLibrary.push({
+        id: currentExerciseId,
+        name: `Nuovo esercizio ${exerciseLibrary.length + 1}`,
+        updatedAt: Date.now(),
+        currentStep,
+        esercizio
+    });
+    renderStep();
+}
+
+function saveExerciseNow() {
+    syncCurrentStepFromEditor();
+    saveToLocalStorage();
+}
+
+function deleteCurrentExercise() {
+    if (!exerciseLibrary.length) return;
+    const ok = confirm('Confermi cancellazione dell\'esercizio corrente?');
+    if (!ok) return;
+
+    exerciseLibrary = exerciseLibrary.filter((x) => x.id !== currentExerciseId);
+    if (!exerciseLibrary.length) {
+        currentExerciseId = `ex-${Date.now()}`;
+        currentStep = 0;
+        esercizio = [nuovoStep()];
+        exerciseLibrary.push({
+            id: currentExerciseId,
+            name: 'Nuovo esercizio',
+            updatedAt: Date.now(),
+            currentStep,
+            esercizio
+        });
+    } else {
+        currentExerciseId = exerciseLibrary[0].id;
+        const normalized = normalizeExerciseData(exerciseLibrary[0]);
+        esercizio = normalized.esercizio;
+        currentStep = normalized.currentStep;
+    }
+    saveToLocalStorage();
+    renderStep();
 }
 
 function syncCurrentStepFromEditor() {
@@ -240,6 +415,7 @@ function setupAutosaveListeners() {
     $('#editorTitle').on('input', autosaveEditorDraft);
     $('#editorDescriptionCap').on('input', autosaveEditorDraft);
     $('#editorDescriptionLiq').on('input', autosaveEditorDraft);
+    $('#txConto').on('focus input', updateContiApertiSuggestions);
     $(window).on('beforeunload', saveToLocalStorage);
 
     autosaveBound = true;
@@ -329,7 +505,19 @@ function updateContiApertiSuggestions() {
     const datalist = document.getElementById('contiApertiList');
     if (!datalist) return;
 
-    const contiAperti = Object.keys(conti);
+    const contiApertiSet = new Set(Object.keys(conti).filter(Boolean));
+
+    esercizio.forEach((step) => {
+        [
+            ...(step?.capitalizzazione?.transazioni || []),
+            ...(step?.liquidazione?.transazioni || [])
+        ].forEach((tx) => {
+            const nomeConto = String(tx?.conto || tx?.nome || '').trim();
+            if (nomeConto) contiApertiSet.add(nomeConto);
+        });
+    });
+
+    const contiAperti = [...contiApertiSet];
     datalist.innerHTML = contiAperti
         .sort((a, b) => a.localeCompare(b, 'it'))
         .map((nome) => `<option value="${nome}"></option>`)
@@ -382,6 +570,59 @@ function removeTransaction(sezione, index) {
     renderStep();
 }
 
+function txSignature(t) {
+    return `TX:${t.sezione}:${t.conto}:${t.tipoVar}:${Number(t.importo).toFixed(2)}`;
+}
+
+function buildManualTxLine(t) {
+    const dare = (t.tipoVar === 'VFA' || t.tipoVar === 'VEN') ? Number(t.importo).toFixed(2) : '-';
+    const avere = (t.tipoVar === 'VFP' || t.tipoVar === 'VEP') ? Number(t.importo).toFixed(2) : '-';
+    return `[${txSignature(t)}] ${t.conto} | ${t.tipoVar} | ${t.categoria} | Dare: ${dare} | Avere: ${avere} | ${t.descrizione || ''}`;
+}
+
+function isMappedInSection(text, t) {
+    const sectionText = (text || '').toLowerCase();
+    return sectionText.includes(txSignature(t).toLowerCase()) || sectionText.includes(String(t.conto).toLowerCase());
+}
+
+function getMissingSectionsForTx(step, t) {
+    const missing = [];
+    if (!isMappedInSection(step.reportManual.giornale, t)) missing.push('Giornale');
+    if (!isMappedInSection(step.reportManual.mastrini, t)) missing.push('Mastrini');
+    if (t.categoria === 'CE' && !isMappedInSection(step.reportManual.ce, t)) missing.push('CE');
+    if (t.categoria === 'SP' && !isMappedInSection(step.reportManual.sp, t)) missing.push('SP');
+    return missing;
+}
+
+function appendToManualSection(section, line) {
+    const step = esercizio[currentStep];
+    ensureStepStructures(step);
+    const current = step.reportManual[section] || '';
+    if (!current.includes(line)) {
+        step.reportManual[section] = current ? `${current}\n${line}` : line;
+    }
+}
+
+function insertTxIntoSection(areaKey, txIndex, target) {
+    const step = esercizio[currentStep];
+    ensureStepStructures(step);
+    const tx = step[areaKey]?.transazioni?.[txIndex];
+    if (!tx) return;
+
+    const line = buildManualTxLine(tx);
+    if (target === 'all') {
+        appendToManualSection('giornale', line);
+        appendToManualSection('mastrini', line);
+        if (tx.categoria === 'CE') appendToManualSection('ce', line);
+        if (tx.categoria === 'SP') appendToManualSection('sp', line);
+    } else if (target === 'ce-sp') {
+        appendToManualSection(tx.categoria === 'CE' ? 'ce' : 'sp', line);
+    } else {
+        appendToManualSection(target, line);
+    }
+    renderStep();
+}
+
 function renderEditorTransactions(step) {
     const txList = document.getElementById('txList');
     const capTx = step.capitalizzazione.transazioni;
@@ -398,10 +639,17 @@ function renderEditorTransactions(step) {
         }
 
         return items.map((t, idx) => `
-            <div class="tx-item">
+            <div class="tx-item ${getMissingSectionsForTx(step, t).length ? 'missing-map' : ''}">
                 <div>
                     <strong>${label}</strong> | ${t.conto} | ${t.tipoVar} | ${t.categoria} | € ${Number(t.importo).toFixed(2)}<br>
-                    <small>${t.descrizione || ''}</small>
+                    <small>${t.descrizione || ''}</small><br>
+                    <small><strong>Mancante in:</strong> ${getMissingSectionsForTx(step, t).join(', ') || 'Nessuna sezione'}</small>
+                    <div class="tx-actions">
+                        <button onclick="insertTxIntoSection('${key}', ${idx}, 'giornale')">+ Giornale</button>
+                        <button onclick="insertTxIntoSection('${key}', ${idx}, 'mastrini')">+ Mastrini</button>
+                        <button onclick="insertTxIntoSection('${key}', ${idx}, 'ce-sp')">+ CE/SP</button>
+                        <button onclick="insertTxIntoSection('${key}', ${idx}, 'all')">+ Tutte</button>
+                    </div>
                 </div>
                 <button class="btn-danger" onclick="removeTransaction('${key}', ${idx})">Rimuovi</button>
             </div>
@@ -614,7 +862,7 @@ function buildGeneratedReports() {
     generated.giornale = transazioni.map((t) => {
         const dare = (t.tipoVar === 'VFA' || t.tipoVar === 'VEN') ? t.importo.toFixed(2) : '-';
         const avere = (t.tipoVar === 'VFP' || t.tipoVar === 'VEP') ? t.importo.toFixed(2) : '-';
-        return `${t.id}. ${t.data} | ${t.nome} | ${t.tipoVar} | Dare: ${dare} | Avere: ${avere} | ${t.descrizione}`;
+           return `[${txSignature(t)}] ${t.id}. ${t.data} | ${t.nome} | ${t.tipoVar} | Dare: ${dare} | Avere: ${avere} | ${t.descrizione}`;
     }).join('\n');
 
     const mastriniLines = [];
@@ -623,11 +871,16 @@ function buildGeneratedReports() {
         const totAvere = dati.avere.reduce((a, b) => a + b, 0);
         const saldo = totDare - totAvere;
         const stato = Math.abs(saldo) < 0.0001 ? 'CHIUSO' : 'APERTO';
+        const refs = transazioni
+            .filter((tx) => tx.nome === nome.toUpperCase())
+            .map((tx) => `[${txSignature(tx)}]`)
+            .join(', ');
         mastriniLines.push(`${nome}`);
         mastriniLines.push(`  Dare: ${dati.dare.map((v) => v.toFixed(2)).join(', ') || '-'}`);
         mastriniLines.push(`  Avere: ${dati.avere.map((v) => v.toFixed(2)).join(', ') || '-'}`);
         mastriniLines.push(`  Saldo: ${saldo.toFixed(2)}`);
         mastriniLines.push(`  Stato conto: ${stato}`);
+        mastriniLines.push(`  Riferimenti: ${refs || '-'}`);
         mastriniLines.push('');
     }
     generated.mastrini = mastriniLines.join('\n').trim();
