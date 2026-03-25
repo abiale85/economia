@@ -828,9 +828,10 @@ function saveItemFromModal() {
         if (target.type === 'analisi') touchedAnalysis = target;
     }
 
-    recalcDerivedFields(page);
     if (touchedAnalysis) {
-        syncBooksFromAnalysis(page, touchedAnalysis);
+        rebuildPageFromAnalisi(page);
+    } else {
+        recalcDerivedFields(page);
     }
     saveState();
     closeItemEditor();
@@ -952,7 +953,7 @@ function deleteItem(itemId) {
     if (!ok) return;
     page.items = page.items.filter((x) => x.id !== itemId);
     if (target?.type === 'analisi') {
-        removeAutoRefsForSource(page, target.id);
+        rebuildPageFromAnalisi(page);
     }
     saveState();
     renderAll();
@@ -999,7 +1000,7 @@ function moveEntry(itemId, entryIndex, dir) {
         recalcDerivedFields(page);
     }
     if (item.type === 'analisi') {
-        syncBooksFromAnalysis(page, item);
+        rebuildPageFromAnalisi(page);
     }
     saveState();
     renderAll();
@@ -1020,7 +1021,7 @@ function deleteEntry(itemId, entryIndex) {
         recalcDerivedFields(page);
     }
     if (item.type === 'analisi') {
-        syncBooksFromAnalysis(page, item);
+        rebuildPageFromAnalisi(page);
     }
     saveState();
     renderAll();
@@ -1053,6 +1054,18 @@ function removeAutoRefsForSource(page, sourceId) {
         if (item.type === 'bilancio') {
             item.data.ceEntries = (item.data.ceEntries || []).filter((e) => e.autoRef !== sourceId);
             item.data.spEntries = (item.data.spEntries || []).filter((e) => e.autoRef !== sourceId);
+        }
+    });
+}
+
+function clearAllAutoRefs(page) {
+    page.items.forEach((item) => {
+        if (item.type === 'mastrino' || item.type === 'giornale' || item.type === 'mastro') {
+            item.data.entries = (item.data.entries || []).filter((e) => !e.autoRef);
+        }
+        if (item.type === 'bilancio') {
+            item.data.ceEntries = (item.data.ceEntries || []).filter((e) => !e.autoRef);
+            item.data.spEntries = (item.data.spEntries || []).filter((e) => !e.autoRef);
         }
     });
 }
@@ -1109,17 +1122,21 @@ function applyStaticAutoSectionOrder(page) {
         .map((x) => x.item);
 }
 
-function syncBooksFromAnalysis(page, analysisItem) {
+function syncBooksFromAnalysis(page, analysisItem, options = {}) {
     const settings = getSettings();
     if (!settings.autoSyncAnalysis) return;
 
     const sourceId = analysisItem.id;
     const movements = extractMovementsFromAnalysis(analysisItem);
 
-    removeAutoRefsForSource(page, sourceId);
+    if (!options.skipCleanup) {
+        removeAutoRefsForSource(page, sourceId);
+    }
 
     if (!movements.length) {
-        recalcDerivedFields(page);
+        if (!options.skipCleanup) {
+            recalcDerivedFields(page);
+        }
         return;
     }
 
@@ -1196,16 +1213,28 @@ function syncBooksFromAnalysis(page, analysisItem) {
         }
     });
 
-    applyStaticAutoSectionOrder(page);
+    if (!options.skipCleanup) {
+        applyStaticAutoSectionOrder(page);
+        recalcDerivedFields(page);
+    }
+}
 
+function rebuildPageFromAnalisi(page) {
+    const settings = getSettings();
+    if (!settings.autoSyncAnalysis) return;
+
+    clearAllAutoRefs(page);
+    page.items
+        .filter((item) => item.type === 'analisi')
+        .forEach((analysis) => syncBooksFromAnalysis(page, analysis, { skipCleanup: true }));
+
+    applyStaticAutoSectionOrder(page);
     recalcDerivedFields(page);
 }
 
 function syncAllAnalisi() {
     state.pages.forEach((page) => {
-        page.items
-            .filter((item) => item.type === 'analisi')
-            .forEach((analysis) => syncBooksFromAnalysis(page, analysis));
+        rebuildPageFromAnalisi(page);
     });
 }
 
