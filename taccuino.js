@@ -72,13 +72,10 @@ function defaultDataByType(type) {
 
 function defaultEntryByType(type) {
     if (type === 'analisi') {
-        return {
-            seEimporto: '', seEconto: '', seEdescrizione: '', seEcodice: '',
-            seUimporto: '', seUconto: '', seUdescrizione: '', seUcodice: '',
-            sfEimporto: '', sfEconto: '', sfEdescrizione: '', sfEcodice: '',
-            sfUimporto: '', sfUconto: '', sfUdescrizione: '', sfUcodice: ''
-        };
+        return window.AnalysisComponents.defaultEntry();
     }
+    const ledgerDefault = window.LedgerComponents.defaultEntry(type);
+    if (ledgerDefault) return ledgerDefault;
     if (type === 'mastrino') {
         return {
             data: new Date().toLocaleDateString('it-IT'),
@@ -167,44 +164,21 @@ function normalizeItem(item) {
     const base = defaultDataByType(type);
 
     if (type === 'analisi') {
-        const isNewFormat = (e) => 'seEimporto' in e || 'seUimporto' in e || 'sfEimporto' in e || 'sfUimporto' in e;
-        const isOldFormat4 = (e) => 'seE' in e || 'seU' in e || 'sfE' in e || 'sfU' in e;
-        const isOldFormat8 = (e) => 'eImporto' in e || 'uImporto' in e;
-        
-        const migrateFrom4 = (oldE) => ({
-            seEimporto: oldE.seE || '', seEconto: '', seEdescrizione: '', seEcodice: 'VFA',
-            seUimporto: oldE.seU || '', seUconto: '', seUdescrizione: '', seUcodice: 'VFP',
-            sfEimporto: oldE.sfE || '', sfEconto: '', sfEdescrizione: '', sfEcodice: 'VEP',
-            sfUimporto: oldE.sfU || '', sfUconto: '', sfUdescrizione: '', sfUcodice: 'VEN'
-        });
-        
-        const migrateFrom8 = (oldE) => ({
-            seEimporto: oldE.eImporto || '', seEconto: oldE.eDescrizione || '', seEdescrizione: '', seEcodice: oldE.eVariazione || 'VFA',
-            seUimporto: oldE.uImporto || '', seUconto: oldE.uDescrizione || '', seUdescrizione: '', seUcodice: oldE.uVariazione || 'VFP',
-            sfEimporto: '', sfEconto: '', sfEdescrizione: '', sfEcodice: 'VEP',
-            sfUimporto: '', sfUconto: '', sfUdescrizione: '', sfUcodice: 'VEN'
-        });
-        
         return {
             id: item.id || uid('item'),
             type,
             data: {
                 titolo: data.titolo || base.titolo,
                 entries: (data.entries && data.entries.length ? data.entries : [defaultEntryByType('analisi')]).map((e) => {
-                    if (isNewFormat(e)) {
-                        return {
-                            seEimporto: e.seEimporto || '', seEconto: e.seEconto || '', seEdescrizione: e.seEdescrizione || '', seEcodice: e.seEcodice || '',
-                            seUimporto: e.seUimporto || '', seUconto: e.seUconto || '', seUdescrizione: e.seUdescrizione || '', seUcodice: e.seUcodice || '',
-                            sfEimporto: e.sfEimporto || '', sfEconto: e.sfEconto || '', sfEdescrizione: e.sfEdescrizione || '', sfEcodice: e.sfEcodice || '',
-                            sfUimporto: e.sfUimporto || '', sfUconto: e.sfUconto || '', sfUdescrizione: e.sfUdescrizione || '', sfUcodice: e.sfUcodice || ''
-                        };
-                    }
-                    if (isOldFormat4(e)) return migrateFrom4(e);
-                    if (isOldFormat8(e)) return migrateFrom8(e);
-                    return defaultEntryByType('analisi');
+                    return window.AnalysisComponents.normalizeEntry(e);
                 })
             }
         };
+    }
+
+    const normalizedLedger = window.LedgerComponents.normalizeItem(type, item, uid);
+    if (normalizedLedger) {
+        return normalizedLedger;
     }
 
     if (type === 'mastrino') {
@@ -436,55 +410,16 @@ function renderItemBody(item) {
     if (item.type === 'analisi') {
         const rows = (d.entries || []).map((r, idx) => `
             <div class="schema-box">
-                <table class="analysis-display">
-                    <thead>
-                        <tr><th></th><th>E</th><th>U</th></tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td><strong>SE</strong></td>
-                            <td>
-                                <div class="analysis-read-cell">
-                                    <div><strong>Imp.</strong> ${escapeHtml(r.seEimporto || '-')}</div>
-                                    <div><strong>Conto</strong> ${escapeHtml(r.seEconto || '-')}</div>
-                                    <div><strong>Desc.</strong> ${escapeHtml(r.seEdescrizione || '-')}</div>
-                                    <div><strong>Cod.</strong> ${escapeHtml(r.seEcodice || '-')}</div>
-                                </div>
-                            </td>
-                            <td>
-                                <div class="analysis-read-cell">
-                                    <div><strong>Imp.</strong> ${escapeHtml(r.seUimporto || '-')}</div>
-                                    <div><strong>Conto</strong> ${escapeHtml(r.seUconto || '-')}</div>
-                                    <div><strong>Desc.</strong> ${escapeHtml(r.seUdescrizione || '-')}</div>
-                                    <div><strong>Cod.</strong> ${escapeHtml(r.seUcodice || '-')}</div>
-                                </div>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td><strong>SF</strong></td>
-                            <td>
-                                <div class="analysis-read-cell">
-                                    <div><strong>Imp.</strong> ${escapeHtml(r.sfEimporto || '-')}</div>
-                                    <div><strong>Conto</strong> ${escapeHtml(r.sfEconto || '-')}</div>
-                                    <div><strong>Desc.</strong> ${escapeHtml(r.sfEdescrizione || '-')}</div>
-                                    <div><strong>Cod.</strong> ${escapeHtml(r.sfEcodice || '-')}</div>
-                                </div>
-                            </td>
-                            <td>
-                                <div class="analysis-read-cell">
-                                    <div><strong>Imp.</strong> ${escapeHtml(r.sfUimporto || '-')}</div>
-                                    <div><strong>Conto</strong> ${escapeHtml(r.sfUconto || '-')}</div>
-                                    <div><strong>Desc.</strong> ${escapeHtml(r.sfUdescrizione || '-')}</div>
-                                    <div><strong>Cod.</strong> ${escapeHtml(r.sfUcodice || '-')}</div>
-                                </div>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+                ${window.AnalysisComponents.renderEntryDisplay(r, escapeHtml)}
                 ${renderEntryActions(item.id, idx)}
             </div>
         `).join('');
         return `<div><strong>${escapeHtml(d.titolo || 'Schema analisi')}</strong></div>${rows}`;
+    }
+
+    const ledgerBody = window.LedgerComponents.renderItemBody(item, editMode, escapeHtml, renderEntryActions);
+    if (ledgerBody !== null) {
+        return ledgerBody;
     }
 
     if (item.type === 'mastrino') {
@@ -703,53 +638,19 @@ function buildTypeForm(type, data, mode) {
     }
 
     if (type === 'analisi' && entryOnly) {
-        return `
-            <table class="analysis-matrix">
-                <thead>
-                    <tr><th></th><th>E</th><th>U</th></tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td><strong>SE</strong></td>
-                        <td>
-                            <div class="analysis-cell">
-                                <input name="seEimporto" value="${escapeHtml(data.seEimporto || '')}" placeholder="Importo">
-                                <input name="seEconto" value="${escapeHtml(data.seEconto || '')}" placeholder="Conto">
-                                <input name="seEdescrizione" value="${escapeHtml(data.seEdescrizione || '')}" placeholder="Descrizione">
-                                <input name="seEcodice" value="${escapeHtml(data.seEcodice || '')}" placeholder="Codice (VFA/VFP/VEN/VEP)">
-                            </div>
-                        </td>
-                        <td>
-                            <div class="analysis-cell">
-                                <input name="seUimporto" value="${escapeHtml(data.seUimporto || '')}" placeholder="Importo">
-                                <input name="seUconto" value="${escapeHtml(data.seUconto || '')}" placeholder="Conto">
-                                <input name="seUdescrizione" value="${escapeHtml(data.seUdescrizione || '')}" placeholder="Descrizione">
-                                <input name="seUcodice" value="${escapeHtml(data.seUcodice || '')}" placeholder="Codice (VFA/VFP/VEN/VEP)">
-                            </div>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td><strong>SF</strong></td>
-                        <td>
-                            <div class="analysis-cell">
-                                <input name="sfEimporto" value="${escapeHtml(data.sfEimporto || '')}" placeholder="Importo">
-                                <input name="sfEconto" value="${escapeHtml(data.sfEconto || '')}" placeholder="Conto">
-                                <input name="sfEdescrizione" value="${escapeHtml(data.sfEdescrizione || '')}" placeholder="Descrizione">
-                                <input name="sfEcodice" value="${escapeHtml(data.sfEcodice || '')}" placeholder="Codice (VFA/VFP/VEN/VEP)">
-                            </div>
-                        </td>
-                        <td>
-                            <div class="analysis-cell">
-                                <input name="sfUimporto" value="${escapeHtml(data.sfUimporto || '')}" placeholder="Importo">
-                                <input name="sfUconto" value="${escapeHtml(data.sfUconto || '')}" placeholder="Conto">
-                                <input name="sfUdescrizione" value="${escapeHtml(data.sfUdescrizione || '')}" placeholder="Descrizione">
-                                <input name="sfUcodice" value="${escapeHtml(data.sfUcodice || '')}" placeholder="Codice (VFA/VFP/VEN/VEP)">
-                            </div>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        `;
+        return window.AnalysisComponents.renderEntryForm(data, escapeHtml);
+    }
+
+    const ledgerForm = window.LedgerComponents.renderTypeForm(
+        type,
+        data,
+        entryOnly,
+        escapeHtml,
+        accountsDatalist,
+        computeMastrinoStatus
+    );
+    if (ledgerForm !== null) {
+        return ledgerForm;
     }
 
     if (type === 'mastrino' && !entryOnly) {
@@ -930,8 +831,6 @@ function buildInitialData(type, raw) {
     if (type === 'analisi') {
         return {
             titolo: raw.titolo || base.titolo,
-            sf: raw.sf || base.sf,
-            se: raw.se || base.se,
             entries: [defaultEntryByType('analisi')]
         };
     }
@@ -953,8 +852,6 @@ function buildInitialData(type, raw) {
 function updateItemMeta(item, raw) {
     if (item.type === 'analisi') {
         item.data.titolo = raw.titolo || item.data.titolo;
-        item.data.sf = raw.sf || item.data.sf;
-        item.data.se = raw.se || item.data.se;
     }
     if (item.type === 'mastrino') {
         item.data.conto = raw.conto || item.data.conto;
@@ -975,25 +872,14 @@ function updateItemMeta(item, raw) {
 
 function buildEntryFromForm(type, raw) {
     if (type === 'analisi') {
-        return {
-            seEimporto: raw.seEimporto || '',
-            seEconto: raw.seEconto || '',
-            seEdescrizione: raw.seEdescrizione || '',
-            seEcodice: raw.seEcodice || '',
-            seUimporto: raw.seUimporto || '',
-            seUconto: raw.seUconto || '',
-            seUdescrizione: raw.seUdescrizione || '',
-            seUcodice: raw.seUcodice || '',
-            sfEimporto: raw.sfEimporto || '',
-            sfEconto: raw.sfEconto || '',
-            sfEdescrizione: raw.sfEdescrizione || '',
-            sfEcodice: raw.sfEcodice || '',
-            sfUimporto: raw.sfUimporto || '',
-            sfUconto: raw.sfUconto || '',
-            sfUdescrizione: raw.sfUdescrizione || '',
-            sfUcodice: raw.sfUcodice || ''
-        };
+        return window.AnalysisComponents.buildEntryFromForm(raw);
     }
+
+    const ledgerEntry = window.LedgerComponents.buildEntryFromForm(type, raw);
+    if (ledgerEntry !== null) {
+        return ledgerEntry;
+    }
+
     if (type === 'mastrino') {
         return {
             data: raw.data || '',
@@ -1192,57 +1078,8 @@ function classifyForCeSp(conto, code, dare, avere) {
 }
 
 function extractMovementsFromAnalysis(analysisItem) {
-    const out = [];
     const rows = analysisItem.data?.entries || [];
-
-    rows.forEach((r) => {
-        // SE-E movement
-        const seEamt = parseAmount(r.seEimporto);
-        if (seEamt > 0 && r.seEconto) {
-            out.push({
-                conto: r.seEconto,
-                code: normalizeVarCode(r.seEcodice, '+'),
-                amount: seEamt,
-                descrizione: r.seEdescrizione || `SE-E da Analisi`,
-                side: 'SE-E'
-            });
-        }
-        // SE-U movement
-        const seUamt = parseAmount(r.seUimporto);
-        if (seUamt > 0 && r.seUconto) {
-            out.push({
-                conto: r.seUconto,
-                code: normalizeVarCode(r.seUcodice, '-'),
-                amount: seUamt,
-                descrizione: r.seUdescrizione || `SE-U da Analisi`,
-                side: 'SE-U'
-            });
-        }
-        // SF-E movement
-        const sfEamt = parseAmount(r.sfEimporto);
-        if (sfEamt > 0 && r.sfEconto) {
-            out.push({
-                conto: r.sfEconto,
-                code: normalizeVarCode(r.sfEcodice, '+'),
-                amount: sfEamt,
-                descrizione: r.sfEdescrizione || `SF-E da Analisi`,
-                side: 'SF-E'
-            });
-        }
-        // SF-U movement
-        const sfUamt = parseAmount(r.sfUimporto);
-        if (sfUamt > 0 && r.sfUconto) {
-            out.push({
-                conto: r.sfUconto,
-                code: normalizeVarCode(r.sfUcodice, '-'),
-                amount: sfUamt,
-                descrizione: r.sfUdescrizione || `SF-U da Analisi`,
-                side: 'SF-U'
-            });
-        }
-    });
-
-    return out.filter((m) => m.conto);
+    return window.AnalysisComponents.extractMovements(rows, parseAmount, normalizeVarCode);
 }
 
 function syncBooksFromAnalysis(page, analysisItem) {
