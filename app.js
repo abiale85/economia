@@ -31,6 +31,12 @@ function nuovoStep() {
             ce: '',
             sp: '',
             bilancio: ''
+        },
+        reportGuided: {
+            giornale: [],
+            mastrini: [],
+            ce: [],
+            sp: []
         }
     };
 }
@@ -42,12 +48,117 @@ function ensureStepStructures(step) {
     if (typeof step.reportManual.bilancio !== 'string') {
         step.reportManual.bilancio = '';
     }
+    if (!step.reportGuided) {
+        step.reportGuided = { giornale: [], mastrini: [], ce: [], sp: [] };
+    }
+    step.reportGuided.giornale = Array.isArray(step.reportGuided.giornale) ? step.reportGuided.giornale : [];
+    step.reportGuided.mastrini = Array.isArray(step.reportGuided.mastrini) ? step.reportGuided.mastrini : [];
+    step.reportGuided.ce = Array.isArray(step.reportGuided.ce) ? step.reportGuided.ce : [];
+    step.reportGuided.sp = Array.isArray(step.reportGuided.sp) ? step.reportGuided.sp : [];
     if (!step.capitalizzazione) {
         step.capitalizzazione = { descrizione: '', transazioni: [] };
     }
     if (!step.liquidazione) {
         step.liquidazione = { descrizione: '', transazioni: [] };
     }
+
+    // Migrazione morbida: se esistono testi manuali ma non righe guidate, converte i blocchi principali.
+    if (!step.reportGuided.giornale.length && step.reportManual.giornale) {
+        step.reportGuided.giornale = step.reportManual.giornale
+            .split('\n')
+            .map((line) => line.trim())
+            .filter(Boolean)
+            .map((line) => {
+                const m = line.match(/\[(TX:[^\]]+)\]\s*(?:\d+\.\s*)?([^|]+)\|\s*([^|]+)\|\s*Dare:\s*([^|]+)\|\s*Avere:\s*([^|]+)\|\s*(.*)$/i);
+                if (m) {
+                    return {
+                        ref: m[1].trim(),
+                        data: '',
+                        conto: m[2].trim(),
+                        tipoVar: m[3].trim(),
+                        dare: m[4].trim() === '-' ? '' : m[4].trim(),
+                        avere: m[5].trim() === '-' ? '' : m[5].trim(),
+                        descrizione: m[6].trim()
+                    };
+                }
+                return {
+                    ref: '',
+                    data: '',
+                    conto: line,
+                    tipoVar: '',
+                    dare: '',
+                    avere: '',
+                    descrizione: ''
+                };
+            });
+    }
+
+    if (!step.reportGuided.ce.length && step.reportManual.ce) {
+        step.reportGuided.ce = step.reportManual.ce
+            .split('\n')
+            .map((line) => line.trim())
+            .map((line) => {
+                const m = line.match(/^(Costo|Ricavo)\s*-\s*([^:]+):\s*([\d.,-]+)/i);
+                if (!m) return null;
+                return { tipo: m[1], conto: m[2].trim(), importo: m[3].replace(',', '.') };
+            })
+            .filter(Boolean);
+    }
+
+    if (!step.reportGuided.sp.length && step.reportManual.sp) {
+        step.reportGuided.sp = step.reportManual.sp
+            .split('\n')
+            .map((line) => line.trim())
+            .map((line) => {
+                const m = line.match(/^(Attivo|Passivo)\s*-\s*([^:]+):\s*([\d.,-]+)/i);
+                if (!m) return null;
+                return { tipo: m[1], conto: m[2].trim(), importo: m[3].replace(',', '.') };
+            })
+            .filter(Boolean);
+    }
+}
+
+function syncReportManualFromGuided(step) {
+    ensureStepStructures(step);
+
+    step.reportManual.giornale = step.reportGuided.giornale.map((r, idx) => {
+        const ref = r.ref ? `[${r.ref}] ` : '';
+        const dare = r.dare ? Number(r.dare).toFixed(2) : '-';
+        const avere = r.avere ? Number(r.avere).toFixed(2) : '-';
+        const conto = r.conto || '-';
+        const tipoVar = r.tipoVar || '-';
+        const descr = r.descrizione || '';
+        return `${ref}${idx + 1}. ${r.data || '-'} | ${conto} | ${tipoVar} | Dare: ${dare} | Avere: ${avere} | ${descr}`;
+    }).join('\n');
+
+    step.reportManual.mastrini = step.reportGuided.mastrini.map((r) => {
+        const dare = r.dare ? Number(r.dare).toFixed(2) : '-';
+        const avere = r.avere ? Number(r.avere).toFixed(2) : '-';
+        const saldo = r.saldo ? Number(r.saldo).toFixed(2) : (Number(r.dare || 0) - Number(r.avere || 0)).toFixed(2);
+        const stato = r.stato || (Math.abs(Number(saldo)) < 0.0001 ? 'CHIUSO' : 'APERTO');
+        return [
+            `${r.conto || '-'}`,
+            `  Dare: ${dare}`,
+            `  Avere: ${avere}`,
+            `  Saldo: ${saldo}`,
+            `  Stato conto: ${stato}`,
+            `  Riferimenti: ${r.riferimenti || '-'}`
+        ].join('\n');
+    }).join('\n\n');
+
+    const ceLines = ['CONTO ECONOMICO'];
+    step.reportGuided.ce.forEach((r) => {
+        if (!r.conto) return;
+        ceLines.push(`${r.tipo || 'Costo'} - ${r.conto}: ${Number(r.importo || 0).toFixed(2)}`);
+    });
+    step.reportManual.ce = ceLines.join('\n');
+
+    const spLines = ['STATO PATRIMONIALE'];
+    step.reportGuided.sp.forEach((r) => {
+        if (!r.conto) return;
+        spLines.push(`${r.tipo || 'Attivo'} - ${r.conto}: ${Number(r.importo || 0).toFixed(2)}`);
+    });
+    step.reportManual.sp = spLines.join('\n');
 }
 
 function normalizeTransaction(tx, defaultSection) {
@@ -191,6 +302,12 @@ function normalizeExerciseData(data) {
                     ce: step.reportManual?.ce || '',
                     sp: step.reportManual?.sp || '',
                     bilancio: step.reportManual?.bilancio || ''
+                },
+                reportGuided: {
+                    giornale: Array.isArray(step.reportGuided?.giornale) ? step.reportGuided.giornale : [],
+                    mastrini: Array.isArray(step.reportGuided?.mastrini) ? step.reportGuided.mastrini : [],
+                    ce: Array.isArray(step.reportGuided?.ce) ? step.reportGuided.ce : [],
+                    sp: Array.isArray(step.reportGuided?.sp) ? step.reportGuided.sp : []
                 }
             };
         }
@@ -216,6 +333,12 @@ function normalizeExerciseData(data) {
                 ce: '',
                 sp: '',
                 bilancio: ''
+            },
+            reportGuided: {
+                giornale: [],
+                mastrini: [],
+                ce: [],
+                sp: []
             }
         };
     });
@@ -586,11 +709,15 @@ function isMappedInSection(text, t) {
 }
 
 function getMissingSectionsForTx(step, t) {
+    ensureStepStructures(step);
+    const sig = txSignature(t);
+    const containsGuided = (rows) => rows.some((r) => (r.ref || '').includes(sig) || String(r.conto || '').toLowerCase() === String(t.conto).toLowerCase());
+
     const missing = [];
-    if (!isMappedInSection(step.reportManual.giornale, t)) missing.push('Giornale');
-    if (!isMappedInSection(step.reportManual.mastrini, t)) missing.push('Mastrini');
-    if (t.categoria === 'CE' && !isMappedInSection(step.reportManual.ce, t)) missing.push('CE');
-    if (t.categoria === 'SP' && !isMappedInSection(step.reportManual.sp, t)) missing.push('SP');
+    if (!(containsGuided(step.reportGuided.giornale) || isMappedInSection(step.reportManual.giornale, t))) missing.push('Giornale');
+    if (!(containsGuided(step.reportGuided.mastrini) || isMappedInSection(step.reportManual.mastrini, t))) missing.push('Mastrini');
+    if (t.categoria === 'CE' && !(containsGuided(step.reportGuided.ce) || isMappedInSection(step.reportManual.ce, t))) missing.push('CE');
+    if (t.categoria === 'SP' && !(containsGuided(step.reportGuided.sp) || isMappedInSection(step.reportManual.sp, t))) missing.push('SP');
     return missing;
 }
 
@@ -609,17 +736,65 @@ function insertTxIntoSection(areaKey, txIndex, target) {
     const tx = step[areaKey]?.transazioni?.[txIndex];
     if (!tx) return;
 
-    const line = buildManualTxLine(tx);
+    const sig = txSignature(tx);
+
+    const addGiornale = () => {
+        const exists = step.reportGuided.giornale.some((r) => (r.ref || '').includes(sig));
+        if (exists) return;
+        step.reportGuided.giornale.push({
+            ref: sig,
+            data: new Date().toLocaleDateString('it-IT'),
+            conto: tx.conto,
+            tipoVar: tx.tipoVar,
+            dare: (tx.tipoVar === 'VFA' || tx.tipoVar === 'VEN') ? tx.importo : '',
+            avere: (tx.tipoVar === 'VFP' || tx.tipoVar === 'VEP') ? tx.importo : '',
+            descrizione: tx.descrizione || ''
+        });
+    };
+
+    const addMastrino = () => {
+        const exists = step.reportGuided.mastrini.some((r) => String(r.conto).toLowerCase() === String(tx.conto).toLowerCase() && String(r.riferimenti || '').includes(sig));
+        if (exists) return;
+        const dare = (tx.tipoVar === 'VFA' || tx.tipoVar === 'VEN') ? Number(tx.importo) : 0;
+        const avere = (tx.tipoVar === 'VFP' || tx.tipoVar === 'VEP') ? Number(tx.importo) : 0;
+        const saldo = dare - avere;
+        step.reportGuided.mastrini.push({
+            conto: tx.conto,
+            dare: dare || '',
+            avere: avere || '',
+            saldo,
+            stato: Math.abs(saldo) < 0.0001 ? 'CHIUSO' : 'APERTO',
+            riferimenti: `[${sig}]`
+        });
+    };
+
+    const addCeSp = () => {
+        const arr = tx.categoria === 'CE' ? step.reportGuided.ce : step.reportGuided.sp;
+        const exists = arr.some((r) => String(r.conto).toLowerCase() === String(tx.conto).toLowerCase() && String(r.ref || '').includes(sig));
+        if (exists) return;
+        arr.push({
+            tipo: tx.categoria === 'CE'
+                ? ((tx.tipoVar === 'VEN') ? 'Costo' : 'Ricavo')
+                : ((tx.tipoVar === 'VFP') ? 'Passivo' : 'Attivo'),
+            conto: tx.conto,
+            importo: Number(tx.importo) || 0,
+            ref: sig
+        });
+    };
+
     if (target === 'all') {
-        appendToManualSection('giornale', line);
-        appendToManualSection('mastrini', line);
-        if (tx.categoria === 'CE') appendToManualSection('ce', line);
-        if (tx.categoria === 'SP') appendToManualSection('sp', line);
+        addGiornale();
+        addMastrino();
+        addCeSp();
     } else if (target === 'ce-sp') {
-        appendToManualSection(tx.categoria === 'CE' ? 'ce' : 'sp', line);
-    } else {
-        appendToManualSection(target, line);
+        addCeSp();
+    } else if (target === 'giornale') {
+        addGiornale();
+    } else if (target === 'mastrini') {
+        addMastrino();
     }
+
+    syncReportManualFromGuided(step);
     renderStep();
 }
 
@@ -687,41 +862,45 @@ function renderStepContent() {
     const step = esercizio[currentStep];
     ensureStepStructures(step);
 
-    const helper = 'Le sezioni sono manuali. Compila tu i contenuti oppure usa il bottone di generazione automatica della singola sezione.';
+    const helper = 'Compila le righe in modo guidato (non testo libero): ogni modifica aggiorna i report manuali.';
 
     const html = `
         <div class="panel">
-            <h2>Libro Giornale (manuale)</h2>
+            <h2>Libro Giornale (manuale guidato)</h2>
             <div class="builder-actions">
                 <button onclick="generateSection('giornale')">Genera automaticamente</button>
+                <button onclick="addGuidedRow('giornale')">Aggiungi riga</button>
                 <button class="btn-secondary" onclick="clearSection('giornale')">Svuota</button>
             </div>
             <p>${helper}</p>
-            <textarea rows="10" oninput="updateManualSection('giornale', this.value)">${escapeHtml(step.reportManual.giornale)}</textarea>
+            ${renderGuidedGiornaleTable(step)}
         </div>
 
         <div class="panel">
-            <h2>Mastrini (manuale)</h2>
+            <h2>Mastrini (manuale guidato)</h2>
             <div class="builder-actions">
                 <button onclick="generateSection('mastrini')">Genera automaticamente</button>
+                <button onclick="addGuidedRow('mastrini')">Aggiungi riga</button>
                 <button class="btn-secondary" onclick="clearSection('mastrini')">Svuota</button>
             </div>
-            <textarea rows="10" oninput="updateManualSection('mastrini', this.value)">${escapeHtml(step.reportManual.mastrini)}</textarea>
+            ${renderGuidedMastriniTable(step)}
         </div>
 
         <div class="panel">
-            <h2>Conto Economico e Stato Patrimoniale (manuali)</h2>
+            <h2>Conto Economico e Stato Patrimoniale (manuali guidati)</h2>
             <div class="builder-actions">
                 <button onclick="generateSection('ce')">Genera CE</button>
                 <button onclick="generateSection('sp')">Genera SP</button>
                 <button onclick="generateAllSections()">Genera tutte le sezioni</button>
+                <button onclick="addGuidedRow('ce')">Aggiungi riga CE</button>
+                <button onclick="addGuidedRow('sp')">Aggiungi riga SP</button>
                 <button class="btn-secondary" onclick="clearSection('ce')">Svuota CE</button>
                 <button class="btn-secondary" onclick="clearSection('sp')">Svuota SP</button>
             </div>
-            <label>Conto Economico</label>
-            <textarea rows="8" oninput="updateManualSection('ce', this.value)">${escapeHtml(step.reportManual.ce)}</textarea>
-            <label>Stato Patrimoniale</label>
-            <textarea rows="8" oninput="updateManualSection('sp', this.value)">${escapeHtml(step.reportManual.sp)}</textarea>
+            <h3>Conto Economico</h3>
+            ${renderGuidedCeSpTable(step, 'ce')}
+            <h3>Stato Patrimoniale</h3>
+            ${renderGuidedCeSpTable(step, 'sp')}
         </div>
         ${currentStep === esercizio.length - 1 ? `
         <div class="panel">
@@ -753,10 +932,133 @@ function updateManualSection(section, value) {
     saveToLocalStorage();
 }
 
+function renderGuidedGiornaleTable(step) {
+    const rows = step.reportGuided.giornale;
+    const body = rows.map((r, i) => `
+        <tr>
+            <td><input type="text" value="${escapeHtml(r.data || '')}" onchange="updateGuidedRow('giornale', ${i}, 'data', this.value)"></td>
+            <td><input type="text" value="${escapeHtml(r.conto || '')}" onchange="updateGuidedRow('giornale', ${i}, 'conto', this.value)"></td>
+            <td><input type="text" value="${escapeHtml(r.tipoVar || '')}" onchange="updateGuidedRow('giornale', ${i}, 'tipoVar', this.value)"></td>
+            <td><input type="number" step="0.01" value="${escapeHtml(r.dare || '')}" onchange="updateGuidedRow('giornale', ${i}, 'dare', this.value)"></td>
+            <td><input type="number" step="0.01" value="${escapeHtml(r.avere || '')}" onchange="updateGuidedRow('giornale', ${i}, 'avere', this.value)"></td>
+            <td><input type="text" value="${escapeHtml(r.descrizione || '')}" onchange="updateGuidedRow('giornale', ${i}, 'descrizione', this.value)"></td>
+            <td><button class="btn-danger" onclick="removeGuidedRow('giornale', ${i})">X</button></td>
+        </tr>
+    `).join('');
+
+    return `
+        <table class="journal-table">
+            <thead>
+                <tr><th>Data</th><th>Conto</th><th>Analisi</th><th>Dare</th><th>Avere</th><th>Descrizione</th><th></th></tr>
+            </thead>
+            <tbody>${body || '<tr><td colspan="7">Nessuna riga. Usa "Aggiungi riga".</td></tr>'}</tbody>
+        </table>
+    `;
+}
+
+function renderGuidedMastriniTable(step) {
+    const rows = step.reportGuided.mastrini;
+    const body = rows.map((r, i) => `
+        <tr>
+            <td><input type="text" value="${escapeHtml(r.conto || '')}" onchange="updateGuidedRow('mastrini', ${i}, 'conto', this.value)"></td>
+            <td><input type="number" step="0.01" value="${escapeHtml(r.dare || '')}" onchange="updateGuidedRow('mastrini', ${i}, 'dare', this.value)"></td>
+            <td><input type="number" step="0.01" value="${escapeHtml(r.avere || '')}" onchange="updateGuidedRow('mastrini', ${i}, 'avere', this.value)"></td>
+            <td><input type="number" step="0.01" value="${escapeHtml(r.saldo || '')}" onchange="updateGuidedRow('mastrini', ${i}, 'saldo', this.value)"></td>
+            <td>
+                <select onchange="updateGuidedRow('mastrini', ${i}, 'stato', this.value)">
+                    <option value="APERTO" ${String(r.stato || '') === 'APERTO' ? 'selected' : ''}>APERTO</option>
+                    <option value="CHIUSO" ${String(r.stato || '') === 'CHIUSO' ? 'selected' : ''}>CHIUSO</option>
+                </select>
+            </td>
+            <td><input type="text" value="${escapeHtml(r.riferimenti || '')}" onchange="updateGuidedRow('mastrini', ${i}, 'riferimenti', this.value)"></td>
+            <td><button class="btn-danger" onclick="removeGuidedRow('mastrini', ${i})">X</button></td>
+        </tr>
+    `).join('');
+
+    return `
+        <table class="journal-table">
+            <thead>
+                <tr><th>Conto</th><th>Dare</th><th>Avere</th><th>Saldo</th><th>Stato</th><th>Riferimenti</th><th></th></tr>
+            </thead>
+            <tbody>${body || '<tr><td colspan="7">Nessuna riga. Usa "Aggiungi riga".</td></tr>'}</tbody>
+        </table>
+    `;
+}
+
+function renderGuidedCeSpTable(step, section) {
+    const rows = step.reportGuided[section];
+    const isCe = section === 'ce';
+    const body = rows.map((r, i) => `
+        <tr>
+            <td>
+                <select onchange="updateGuidedRow('${section}', ${i}, 'tipo', this.value)">
+                    ${(isCe
+                        ? ['Costo', 'Ricavo']
+                        : ['Attivo', 'Passivo'])
+                        .map((x) => `<option value="${x}" ${String(r.tipo || '') === x ? 'selected' : ''}>${x}</option>`)
+                        .join('')}
+                </select>
+            </td>
+            <td><input type="text" value="${escapeHtml(r.conto || '')}" onchange="updateGuidedRow('${section}', ${i}, 'conto', this.value)"></td>
+            <td><input type="number" step="0.01" value="${escapeHtml(r.importo || '')}" onchange="updateGuidedRow('${section}', ${i}, 'importo', this.value)"></td>
+            <td><button class="btn-danger" onclick="removeGuidedRow('${section}', ${i})">X</button></td>
+        </tr>
+    `).join('');
+
+    return `
+        <table class="journal-table">
+            <thead>
+                <tr><th>${isCe ? 'Tipo CE' : 'Tipo SP'}</th><th>Conto</th><th>Importo</th><th></th></tr>
+            </thead>
+            <tbody>${body || '<tr><td colspan="4">Nessuna riga. Usa "Aggiungi riga".</td></tr>'}</tbody>
+        </table>
+    `;
+}
+
+function addGuidedRow(section) {
+    const step = esercizio[currentStep];
+    ensureStepStructures(step);
+
+    const defaults = {
+        giornale: { ref: '', data: new Date().toLocaleDateString('it-IT'), conto: '', tipoVar: '', dare: '', avere: '', descrizione: '' },
+        mastrini: { conto: '', dare: '', avere: '', saldo: '', stato: 'APERTO', riferimenti: '' },
+        ce: { tipo: 'Costo', conto: '', importo: '' },
+        sp: { tipo: 'Attivo', conto: '', importo: '' }
+    };
+
+    if (!defaults[section]) return;
+    step.reportGuided[section].push({ ...defaults[section] });
+    syncReportManualFromGuided(step);
+    renderStep();
+}
+
+function updateGuidedRow(section, index, field, value) {
+    const step = esercizio[currentStep];
+    ensureStepStructures(step);
+    if (!step.reportGuided[section] || !step.reportGuided[section][index]) return;
+    step.reportGuided[section][index][field] = value;
+    syncReportManualFromGuided(step);
+    saveToLocalStorage();
+}
+
+function removeGuidedRow(section, index) {
+    const step = esercizio[currentStep];
+    ensureStepStructures(step);
+    if (!step.reportGuided[section]) return;
+    step.reportGuided[section].splice(index, 1);
+    syncReportManualFromGuided(step);
+    renderStep();
+}
+
 function clearSection(section) {
     const step = esercizio[currentStep];
     ensureStepStructures(step);
     step.reportManual[section] = '';
+
+    if (section === 'giornale' || section === 'mastrini' || section === 'ce' || section === 'sp') {
+        step.reportGuided[section] = [];
+    }
+
     renderStep();
 }
 
@@ -764,6 +1066,12 @@ function generateSection(section) {
     const generated = buildGeneratedReports();
     const step = esercizio[currentStep];
     ensureStepStructures(step);
+
+    if (section === 'giornale' || section === 'mastrini' || section === 'ce' || section === 'sp') {
+        step.reportGuided[section] = generated.guided[section] || [];
+        syncReportManualFromGuided(step);
+    }
+
     step.reportManual[section] = generated[section] || '';
     renderStep();
 }
@@ -772,6 +1080,11 @@ function generateAllSections() {
     const generated = buildGeneratedReports();
     const step = esercizio[currentStep];
     ensureStepStructures(step);
+    step.reportGuided.giornale = generated.guided.giornale || [];
+    step.reportGuided.mastrini = generated.guided.mastrini || [];
+    step.reportGuided.ce = generated.guided.ce || [];
+    step.reportGuided.sp = generated.guided.sp || [];
+    syncReportManualFromGuided(step);
     step.reportManual.giornale = generated.giornale;
     step.reportManual.mastrini = generated.mastrini;
     step.reportManual.ce = generated.ce;
@@ -848,7 +1161,13 @@ function buildGeneratedReports() {
         giornale: '',
         mastrini: '',
         ce: '',
-        sp: ''
+        sp: '',
+        guided: {
+            giornale: [],
+            mastrini: [],
+            ce: [],
+            sp: []
+        }
     };
 
     if (!transazioni.length) {
@@ -864,6 +1183,16 @@ function buildGeneratedReports() {
         const avere = (t.tipoVar === 'VFP' || t.tipoVar === 'VEP') ? t.importo.toFixed(2) : '-';
            return `[${txSignature(t)}] ${t.id}. ${t.data} | ${t.nome} | ${t.tipoVar} | Dare: ${dare} | Avere: ${avere} | ${t.descrizione}`;
     }).join('\n');
+
+    generated.guided.giornale = transazioni.map((t) => ({
+        ref: txSignature(t),
+        data: t.data,
+        conto: t.nome,
+        tipoVar: t.tipoVar,
+        dare: (t.tipoVar === 'VFA' || t.tipoVar === 'VEN') ? t.importo.toFixed(2) : '',
+        avere: (t.tipoVar === 'VFP' || t.tipoVar === 'VEP') ? t.importo.toFixed(2) : '',
+        descrizione: t.descrizione || ''
+    }));
 
     const mastriniLines = [];
     for (const [nome, dati] of Object.entries(conti)) {
@@ -882,6 +1211,15 @@ function buildGeneratedReports() {
         mastriniLines.push(`  Stato conto: ${stato}`);
         mastriniLines.push(`  Riferimenti: ${refs || '-'}`);
         mastriniLines.push('');
+
+        generated.guided.mastrini.push({
+            conto: nome,
+            dare: totDare.toFixed(2),
+            avere: totAvere.toFixed(2),
+            saldo: saldo.toFixed(2),
+            stato,
+            riferimenti: refs || '-'
+        });
     }
     generated.mastrini = mastriniLines.join('\n').trim();
 
@@ -894,9 +1232,11 @@ function buildGeneratedReports() {
         if (saldo > 0) {
             ceLines.push(`Costo - ${nome}: ${saldo.toFixed(2)}`);
             costi += saldo;
+            generated.guided.ce.push({ tipo: 'Costo', conto: nome, importo: saldo.toFixed(2) });
         } else if (saldo < 0) {
             ceLines.push(`Ricavo - ${nome}: ${Math.abs(saldo).toFixed(2)}`);
             ricavi += Math.abs(saldo);
+            generated.guided.ce.push({ tipo: 'Ricavo', conto: nome, importo: Math.abs(saldo).toFixed(2) });
         }
     }
     ceLines.push(`Totale costi: ${costi.toFixed(2)}`);
@@ -913,9 +1253,11 @@ function buildGeneratedReports() {
         if (saldo > 0) {
             spLines.push(`Attivo - ${nome}: ${saldo.toFixed(2)}`);
             attivo += saldo;
+            generated.guided.sp.push({ tipo: 'Attivo', conto: nome, importo: saldo.toFixed(2) });
         } else if (saldo < 0) {
             spLines.push(`Passivo - ${nome}: ${Math.abs(saldo).toFixed(2)}`);
             passivo += Math.abs(saldo);
+            generated.guided.sp.push({ tipo: 'Passivo', conto: nome, importo: Math.abs(saldo).toFixed(2) });
         }
     }
     spLines.push(`Totale attivo: ${attivo.toFixed(2)}`);
