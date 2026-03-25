@@ -21,8 +21,30 @@ function nuovoStep() {
         liquidazione: {
             descrizione: '',
             transazioni: []
+        },
+        reportManual: {
+            giornale: '',
+            mastrini: '',
+            ce: '',
+            sp: '',
+            bilancio: ''
         }
     };
+}
+
+function ensureStepStructures(step) {
+    if (!step.reportManual) {
+        step.reportManual = { giornale: '', mastrini: '', ce: '', sp: '', bilancio: '' };
+    }
+    if (typeof step.reportManual.bilancio !== 'string') {
+        step.reportManual.bilancio = '';
+    }
+    if (!step.capitalizzazione) {
+        step.capitalizzazione = { descrizione: '', transazioni: [] };
+    }
+    if (!step.liquidazione) {
+        step.liquidazione = { descrizione: '', transazioni: [] };
+    }
 }
 
 function loadCasoDeltaExample() {
@@ -156,6 +178,13 @@ function loadFromLocalStorage() {
                     liquidazione: {
                         descrizione: step.liquidazione?.descrizione || '',
                         transazioni: Array.isArray(step.liquidazione?.transazioni) ? step.liquidazione.transazioni : []
+                    },
+                    reportManual: {
+                        giornale: step.reportManual?.giornale || '',
+                        mastrini: step.reportManual?.mastrini || '',
+                        ce: step.reportManual?.ce || '',
+                        sp: step.reportManual?.sp || '',
+                        bilancio: step.reportManual?.bilancio || ''
                     }
                 };
             }
@@ -172,6 +201,13 @@ function loadFromLocalStorage() {
                 liquidazione: {
                     descrizione: oldPhase === 'liquidazione' ? (step?.descrizione || '') : '',
                     transazioni: oldPhase === 'liquidazione' ? oldTx : []
+                },
+                reportManual: {
+                    giornale: '',
+                    mastrini: '',
+                    ce: '',
+                    sp: '',
+                    bilancio: ''
                 }
             };
         });
@@ -232,6 +268,7 @@ function renderStep() {
     }
 
     const step = esercizio[currentStep];
+    ensureStepStructures(step);
 
     $('#stepTitle').text(step.titolo);
     $('#stepPhase').text('📋 Operazione Completa').css('background', 'rgba(52, 152, 219, 0.3)');
@@ -281,10 +318,22 @@ function renderStep() {
 
     populateEditor(step);
     renderEditorTransactions(step);
+    updateContiApertiSuggestions();
     renderStepContent();
     renderProgress();
     updateNavigation();
     saveToLocalStorage();
+}
+
+function updateContiApertiSuggestions() {
+    const datalist = document.getElementById('contiApertiList');
+    if (!datalist) return;
+
+    const contiAperti = Object.keys(conti);
+    datalist.innerHTML = contiAperti
+        .sort((a, b) => a.localeCompare(b, 'it'))
+        .map((nome) => `<option value="${nome}"></option>`)
+        .join('');
 }
 
 function populateEditor(step) {
@@ -387,86 +436,259 @@ function deleteCurrentStep() {
 
 function renderStepContent() {
     const content = document.getElementById('stepContent');
-    const stepNum = currentStep + 1;
+    const step = esercizio[currentStep];
+    ensureStepStructures(step);
 
-    let html = `<div class="panel"><h2>Libro Giornale - Evoluzione fino a Step ${stepNum}</h2>`;
-    html += '<table class="journal-table"><thead><tr>';
-    html += '<th>Data/ID</th><th>Conto e Descrizione</th><th>Analisi</th>';
-    html += '<th style="text-align:right">Dare (euro)</th><th style="text-align:right">Avere (euro)</th></tr></thead><tbody>';
+    const helper = 'Le sezioni sono manuali. Compila tu i contenuti oppure usa il bottone di generazione automatica della singola sezione.';
 
-    transazioni.forEach(t => {
-        const dare = (t.tipoVar === 'VFA' || t.tipoVar === 'VEN') ? t.importo : 0;
-        const avere = (t.tipoVar === 'VFP' || t.tipoVar === 'VEP') ? t.importo : 0;
-        html += `<tr class="journal-row">
-            <td data-label="Data/ID" style="color: #999; font-size: 0.8rem;">#${t.id}<br>${t.data}</td>
-            <td data-label="Conto e Descrizione"><strong>${t.nome}</strong><br><small>${t.cat === 'SP' ? 'Stato Patrimoniale' : 'Conto Economico'} | ${t.sezione === 'liquidazione' ? 'Liquidazione' : 'Capitalizzazione'}</small><br><small style="opacity:0.7">${t.descrizione}</small></td>
-            <td data-label="Analisi"><span class="badge ${t.tipoVar.toLowerCase()}">${t.tipoVar}</span></td>
-            <td data-label="Dare (euro)" class="val" style="color: var(--success);">${dare > 0 ? dare.toLocaleString('it-IT', {minimumFractionDigits: 2}) : ''}</td>
-            <td data-label="Avere (euro)" class="val" style="color: var(--danger);">${avere > 0 ? avere.toLocaleString('it-IT', {minimumFractionDigits: 2}) : ''}</td>
-        </tr>`;
-    });
+    const html = `
+        <div class="panel">
+            <h2>Libro Giornale (manuale)</h2>
+            <div class="builder-actions">
+                <button onclick="generateSection('giornale')">Genera automaticamente</button>
+                <button class="btn-secondary" onclick="clearSection('giornale')">Svuota</button>
+            </div>
+            <p>${helper}</p>
+            <textarea rows="10" oninput="updateManualSection('giornale', this.value)">${escapeHtml(step.reportManual.giornale)}</textarea>
+        </div>
 
-    html += '</tbody></table></div>';
+        <div class="panel">
+            <h2>Mastrini (manuale)</h2>
+            <div class="builder-actions">
+                <button onclick="generateSection('mastrini')">Genera automaticamente</button>
+                <button class="btn-secondary" onclick="clearSection('mastrini')">Svuota</button>
+            </div>
+            <textarea rows="10" oninput="updateManualSection('mastrini', this.value)">${escapeHtml(step.reportManual.mastrini)}</textarea>
+        </div>
 
-    html += '<div class="panel"><h2>Conti a T (Mastrini)</h2><div class="mastrini-wrapper">';
+        <div class="panel">
+            <h2>Conto Economico e Stato Patrimoniale (manuali)</h2>
+            <div class="builder-actions">
+                <button onclick="generateSection('ce')">Genera CE</button>
+                <button onclick="generateSection('sp')">Genera SP</button>
+                <button onclick="generateAllSections()">Genera tutte le sezioni</button>
+                <button class="btn-secondary" onclick="clearSection('ce')">Svuota CE</button>
+                <button class="btn-secondary" onclick="clearSection('sp')">Svuota SP</button>
+            </div>
+            <label>Conto Economico</label>
+            <textarea rows="8" oninput="updateManualSection('ce', this.value)">${escapeHtml(step.reportManual.ce)}</textarea>
+            <label>Stato Patrimoniale</label>
+            <textarea rows="8" oninput="updateManualSection('sp', this.value)">${escapeHtml(step.reportManual.sp)}</textarea>
+        </div>
+        ${currentStep === esercizio.length - 1 ? `
+        <div class="panel">
+            <h2>Pagina Finale - Bozza Bilancio di Esercizio</h2>
+            <div class="builder-actions">
+                <button onclick="generateFinalDraft()">Genera bozza bilancio</button>
+                <button class="btn-secondary" onclick="clearSection('bilancio')">Svuota bozza</button>
+            </div>
+            <p>Bozza di studio: puoi modificarla manualmente prima di copiarla nel compito definitivo.</p>
+            <textarea rows="14" oninput="updateManualSection('bilancio', this.value)">${escapeHtml(step.reportManual.bilancio)}</textarea>
+        </div>
+        ` : ''}
+    `;
 
+    content.innerHTML = html;
+}
+
+function escapeHtml(value) {
+    return String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+}
+
+function updateManualSection(section, value) {
+    const step = esercizio[currentStep];
+    ensureStepStructures(step);
+    step.reportManual[section] = value;
+    saveToLocalStorage();
+}
+
+function clearSection(section) {
+    const step = esercizio[currentStep];
+    ensureStepStructures(step);
+    step.reportManual[section] = '';
+    renderStep();
+}
+
+function generateSection(section) {
+    const generated = buildGeneratedReports();
+    const step = esercizio[currentStep];
+    ensureStepStructures(step);
+    step.reportManual[section] = generated[section] || '';
+    renderStep();
+}
+
+function generateAllSections() {
+    const generated = buildGeneratedReports();
+    const step = esercizio[currentStep];
+    ensureStepStructures(step);
+    step.reportManual.giornale = generated.giornale;
+    step.reportManual.mastrini = generated.mastrini;
+    step.reportManual.ce = generated.ce;
+    step.reportManual.sp = generated.sp;
+    if (currentStep === esercizio.length - 1) {
+        step.reportManual.bilancio = buildFinalDraft(generated);
+    }
+    renderStep();
+}
+
+function generateFinalDraft() {
+    const generated = buildGeneratedReports();
+    const step = esercizio[currentStep];
+    ensureStepStructures(step);
+    step.reportManual.bilancio = buildFinalDraft(generated);
+    renderStep();
+}
+
+function buildFinalDraft(generated) {
+    let costi = 0;
+    let ricavi = 0;
+    let attivo = 0;
+    let passivo = 0;
+    const { contiChiusi, contiAperti } = getAccountClosureSummary();
+
+    for (const dati of Object.values(conti)) {
+        const saldo = dati.dare.reduce((a, b) => a + b, 0) - dati.avere.reduce((a, b) => a + b, 0);
+        if (dati.cat === 'CE') {
+            if (saldo > 0) costi += saldo;
+            if (saldo < 0) ricavi += Math.abs(saldo);
+        }
+        if (dati.cat === 'SP') {
+            if (saldo > 0) attivo += saldo;
+            if (saldo < 0) passivo += Math.abs(saldo);
+        }
+    }
+
+    const risultato = ricavi - costi;
+    const statoRisultato = risultato >= 0 ? 'Utile d\'esercizio' : 'Perdita d\'esercizio';
+
+    return [
+        'BOZZA DI BILANCIO DI ESERCIZIO',
+        '',
+        '1) Premessa',
+        `La bozza e stata generata automaticamente sulla base dei movimenti registrati fino allo step ${currentStep + 1}.`,
+        '',
+        '2) Conto Economico (sintesi)',
+        `Totale ricavi: ${ricavi.toFixed(2)}`,
+        `Totale costi: ${costi.toFixed(2)}`,
+        `${statoRisultato}: ${Math.abs(risultato).toFixed(2)}`,
+        '',
+        '3) Stato Patrimoniale (sintesi)',
+        `Totale attivo: ${attivo.toFixed(2)}`,
+        `Totale passivo: ${passivo.toFixed(2)}`,
+        '',
+        '4) Evidenza conti chiusi',
+        contiChiusi.length ? `Conti chiusi (${contiChiusi.length}): ${contiChiusi.join(', ')}` : 'Nessun conto chiuso rilevato.',
+        contiAperti.length ? `Conti ancora aperti (${contiAperti.length}): ${contiAperti.join(', ')}` : 'Nessun conto aperto residuo.',
+        '',
+        '5) Note operative di studio',
+        '- Verificare la quadratura Dare/Avere dei movimenti principali.',
+        '- Controllare coerenza tra CE e SP (effetto risultato economico).',
+        '- Rivedere classificazione dei conti tra SP e CE.',
+        '',
+        '6) Estratto CE/SP generato (riferimento)',
+        generated.ce,
+        '',
+        generated.sp
+    ].join('\n');
+}
+
+function buildGeneratedReports() {
+    const generated = {
+        giornale: '',
+        mastrini: '',
+        ce: '',
+        sp: ''
+    };
+
+    if (!transazioni.length) {
+        generated.giornale = 'Nessun movimento da generare.';
+        generated.mastrini = 'Nessun conto aperto.';
+        generated.ce = 'Nessun dato CE disponibile.';
+        generated.sp = 'Nessun dato SP disponibile.';
+        return generated;
+    }
+
+    generated.giornale = transazioni.map((t) => {
+        const dare = (t.tipoVar === 'VFA' || t.tipoVar === 'VEN') ? t.importo.toFixed(2) : '-';
+        const avere = (t.tipoVar === 'VFP' || t.tipoVar === 'VEP') ? t.importo.toFixed(2) : '-';
+        return `${t.id}. ${t.data} | ${t.nome} | ${t.tipoVar} | Dare: ${dare} | Avere: ${avere} | ${t.descrizione}`;
+    }).join('\n');
+
+    const mastriniLines = [];
     for (const [nome, dati] of Object.entries(conti)) {
         const totDare = dati.dare.reduce((a, b) => a + b, 0);
         const totAvere = dati.avere.reduce((a, b) => a + b, 0);
         const saldo = totDare - totAvere;
-
-        html += `<div class="mastrino-t">
-            <div class="t-header">${nome}</div>
-            <div class="t-content">
-                <div class="t-side"><strong>Dare</strong><br>${dati.dare.map(v => `<div>${v.toFixed(2)}</div>`).join('')}</div>
-                <div class="t-side" style="text-align: right"><strong>Avere</strong><br>${dati.avere.map(v => `<div>${v.toFixed(2)}</div>`).join('')}</div>
-            </div>
-            <div class="t-footer">Saldo: ${saldo.toFixed(2)} euro</div>
-        </div>`;
+        const stato = Math.abs(saldo) < 0.0001 ? 'CHIUSO' : 'APERTO';
+        mastriniLines.push(`${nome}`);
+        mastriniLines.push(`  Dare: ${dati.dare.map((v) => v.toFixed(2)).join(', ') || '-'}`);
+        mastriniLines.push(`  Avere: ${dati.avere.map((v) => v.toFixed(2)).join(', ') || '-'}`);
+        mastriniLines.push(`  Saldo: ${saldo.toFixed(2)}`);
+        mastriniLines.push(`  Stato conto: ${stato}`);
+        mastriniLines.push('');
     }
-
-    html += '</div></div>';
-
-    html += '<div class="bilancio-grid"><div class="statement"><h3>Conto Economico</h3><table width="100%">';
-    html += '<thead><tr><th>Costi (VEN)</th><th>Ricavi (VEP)</th></tr></thead><tbody>';
+    generated.mastrini = mastriniLines.join('\n').trim();
 
     let costi = 0;
     let ricavi = 0;
+    const ceLines = ['CONTO ECONOMICO'];
     for (const [nome, dati] of Object.entries(conti)) {
-        if (dati.cat === 'CE') {
-            const saldo = dati.dare.reduce((a, b) => a + b, 0) - dati.avere.reduce((a, b) => a + b, 0);
-            if (saldo > 0) {
-                html += `<tr><td data-label="Costi (VEN)">${nome}: ${saldo.toFixed(2)}</td><td data-label="Ricavi (VEP)"></td></tr>`;
-                costi += saldo;
-            } else if (saldo < 0) {
-                html += `<tr><td data-label="Costi (VEN)"></td><td data-label="Ricavi (VEP)">${nome}: ${Math.abs(saldo).toFixed(2)}</td></tr>`;
-                ricavi += Math.abs(saldo);
-            }
+        if (dati.cat !== 'CE') continue;
+        const saldo = dati.dare.reduce((a, b) => a + b, 0) - dati.avere.reduce((a, b) => a + b, 0);
+        if (saldo > 0) {
+            ceLines.push(`Costo - ${nome}: ${saldo.toFixed(2)}`);
+            costi += saldo;
+        } else if (saldo < 0) {
+            ceLines.push(`Ricavo - ${nome}: ${Math.abs(saldo).toFixed(2)}`);
+            ricavi += Math.abs(saldo);
         }
     }
-    html += '</tbody></table>';
-    const risultato = ricavi - costi;
-    html += `<div class="total-box" style="background: ${risultato >= 0 ? 'var(--success)' : 'var(--danger)'};"><strong>Risultato: euro ${risultato.toFixed(2)}</strong></div></div>`;
+    ceLines.push(`Totale costi: ${costi.toFixed(2)}`);
+    ceLines.push(`Totale ricavi: ${ricavi.toFixed(2)}`);
+    ceLines.push(`Risultato: ${(ricavi - costi).toFixed(2)}`);
+    generated.ce = ceLines.join('\n');
 
-    html += '<div class="statement"><h3>Stato Patrimoniale</h3><table width="100%"><thead><tr><th>Attivo (VFA-VFP)</th><th>Passivo (VFP-VFA)</th></tr></thead><tbody>';
     let attivo = 0;
     let passivo = 0;
+    const spLines = ['STATO PATRIMONIALE'];
     for (const [nome, dati] of Object.entries(conti)) {
-        if (dati.cat === 'SP') {
-            const saldo = dati.dare.reduce((a, b) => a + b, 0) - dati.avere.reduce((a, b) => a + b, 0);
-            if (saldo > 0) {
-                html += `<tr><td data-label="Attivo">${nome}: ${saldo.toFixed(2)}</td><td data-label="Passivo"></td></tr>`;
-                attivo += saldo;
-            } else if (saldo < 0) {
-                html += `<tr><td data-label="Attivo"></td><td data-label="Passivo">${Math.abs(saldo).toFixed(2)}</td></tr>`;
-                passivo += Math.abs(saldo);
-            }
+        if (dati.cat !== 'SP') continue;
+        const saldo = dati.dare.reduce((a, b) => a + b, 0) - dati.avere.reduce((a, b) => a + b, 0);
+        if (saldo > 0) {
+            spLines.push(`Attivo - ${nome}: ${saldo.toFixed(2)}`);
+            attivo += saldo;
+        } else if (saldo < 0) {
+            spLines.push(`Passivo - ${nome}: ${Math.abs(saldo).toFixed(2)}`);
+            passivo += Math.abs(saldo);
         }
     }
-    html += `</tbody></table><div class="total-box"><strong>Attivo: euro ${attivo.toFixed(2)}</strong></div>`;
-    html += `<div class="total-box" style="background: var(--secondary);"><strong>Passivo: euro ${passivo.toFixed(2)}</strong></div></div></div>`;
+    spLines.push(`Totale attivo: ${attivo.toFixed(2)}`);
+    spLines.push(`Totale passivo: ${passivo.toFixed(2)}`);
+    generated.sp = spLines.join('\n');
 
-    content.innerHTML = html;
+    return generated;
+}
+
+function getAccountClosureSummary() {
+    const contiChiusi = [];
+    const contiAperti = [];
+
+    for (const [nome, dati] of Object.entries(conti)) {
+        const saldo = dati.dare.reduce((a, b) => a + b, 0) - dati.avere.reduce((a, b) => a + b, 0);
+        if (Math.abs(saldo) < 0.0001) {
+            contiChiusi.push(nome);
+        } else {
+            contiAperti.push(nome);
+        }
+    }
+
+    contiChiusi.sort((a, b) => a.localeCompare(b, 'it'));
+    contiAperti.sort((a, b) => a.localeCompare(b, 'it'));
+
+    return { contiChiusi, contiAperti };
 }
 
 function renderProgress() {

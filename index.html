@@ -90,6 +90,31 @@
             color: #6b7280;
         }
 
+        .hint {
+            display: inline-block;
+            margin-left: 6px;
+            width: 18px;
+            height: 18px;
+            line-height: 18px;
+            text-align: center;
+            border-radius: 50%;
+            background: #ecf0f1;
+            color: #2c3e50;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: help;
+        }
+
+        .study-note {
+            margin-top: 12px;
+            padding: 10px;
+            border-left: 4px solid #16a085;
+            background: #f3fbf9;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            line-height: 1.4;
+        }
+
         input, select, textarea {
             width: 100%;
             padding: 10px;
@@ -347,17 +372,18 @@
             <div class="grid-form">
                 <div>
                     <label for="txConto">Conto</label>
-                    <input id="txConto" type="text" placeholder="Es. Merci c/acquisti">
+                    <input id="txConto" type="text" list="contiApertiList" placeholder="Es. Merci c/acquisti">
+                    <datalist id="contiApertiList"></datalist>
                 </div>
                 <div>
-                    <label for="txSezione">Sezione</label>
+                    <label for="txSezione">Sezione<span class="hint" title="Ordine logico consigliato: 1) Capitalizzazione, 2) Liquidazione.&#10;Capitalizzazione: effetti su conti patrimoniali/finanziari.&#10;Liquidazione: effetti economici di costo/ricavo.">?</span></label>
                     <select id="txSezione">
                         <option value="capitalizzazione">Capitalizzazione</option>
                         <option value="liquidazione">Liquidazione</option>
                     </select>
                 </div>
                 <div>
-                    <label for="txTipoVar">Analisi</label>
+                    <label for="txTipoVar">Analisi<span class="hint" title="Sigle da ricordare:&#10;VFA = Variazione Finanziaria Attiva (cassa/banche/crediti aumentano)&#10;VFP = Variazione Finanziaria Passiva (debiti o uscite)&#10;VEN = Variazione Economica Negativa (costi)&#10;VEP = Variazione Economica Positiva (ricavi)&#10;Regola rapida: VFA e VEN in Dare, VFP e VEP in Avere.">?</span></label>
                     <select id="txTipoVar">
                         <option value="VFA">VFA</option>
                         <option value="VFP">VFP</option>
@@ -366,7 +392,7 @@
                     </select>
                 </div>
                 <div>
-                    <label for="txCategoria">Prospetto</label>
+                    <label for="txCategoria">Prospetto<span class="hint" title="SP = Stato Patrimoniale (attivo/passivo).&#10;CE = Conto Economico (costi/ricavi e risultato).&#10;Conti numerari/patrimoniali vanno in SP; conti di reddito in CE.">?</span></label>
                     <select id="txCategoria">
                         <option value="SP">SP</option>
                         <option value="CE">CE</option>
@@ -390,6 +416,10 @@
                 <button class="btn-example" onclick="loadCasoDeltaExample()">Carica esempio Caso Delta</button>
                 <button onclick="createNewStep()">Nuovo step</button>
                 <button class="btn-danger" onclick="deleteCurrentStep()">Elimina step</button>
+            </div>
+
+            <div class="study-note">
+                Ordine operativo consigliato per esercizio manuale: 1) testo step, 2) movimenti con sigle, 3) completamento manuale Libro Giornale, Mastrini, CE/SP. Se vuoi supporto, usa i tasti "Genera automaticamente" nelle singole sezioni.
             </div>
         </div>
 
