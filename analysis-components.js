@@ -195,7 +195,7 @@
                     conto: r.seEconto,
                     code: normalizeVarCode(r.seEcodice, '+'),
                     amount: Math.abs(seEamt),
-                    descrizione: r.seEdescrizione || 'SE-E da Analisi',
+                    descrizione: r.seEdescrizione || '',
                     side: 'SE-E'
                 });
             }
@@ -206,7 +206,7 @@
                     conto: r.seUconto,
                     code: normalizeVarCode(r.seUcodice, '-'),
                     amount: Math.abs(seUamt),
-                    descrizione: r.seUdescrizione || 'SE-U da Analisi',
+                    descrizione: r.seUdescrizione || '',
                     side: 'SE-U'
                 });
             }
@@ -217,7 +217,7 @@
                     conto: r.sfEconto,
                     code: normalizeVarCode(r.sfEcodice, '+'),
                     amount: Math.abs(sfEamt),
-                    descrizione: r.sfEdescrizione || 'SF-E da Analisi',
+                    descrizione: r.sfEdescrizione || '',
                     side: 'SF-E'
                 });
             }
@@ -228,7 +228,7 @@
                     conto: r.sfUconto,
                     code: normalizeVarCode(r.sfUcodice, '-'),
                     amount: Math.abs(sfUamt),
-                    descrizione: r.sfUdescrizione || 'SF-U da Analisi',
+                    descrizione: r.sfUdescrizione || '',
                     side: 'SF-U'
                 });
             }

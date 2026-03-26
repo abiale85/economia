@@ -1167,7 +1167,7 @@ function syncBooksFromAnalysis(page, analysisItem, options = {}) {
         if (mastrino) {
             mastrino.data.conto = mastrino.data.conto || m.conto;
             mastrino.data.entries.push({
-                descrizione: `[AUTO da Analisi] ${m.descrizione}`.trim(),
+                descrizione: m.descrizione || '',
                 dare: dare ? dare.toFixed(2) : '',
                 avere: avere ? avere.toFixed(2) : '',
                 autoRef: sourceId
@@ -1185,7 +1185,7 @@ function syncBooksFromAnalysis(page, analysisItem, options = {}) {
             mastro.data.conto = mastro.data.conto || m.conto;
             mastro.data.entries.push({
                 data: new Date().toLocaleDateString('it-IT'),
-                descrizione: '[AUTO da Analisi]',
+                descrizione: m.descrizione || '',
                 totaleDare: dare ? dare.toFixed(2) : '0.00',
                 totaleAvere: avere ? avere.toFixed(2) : '0.00',
                 saldo: (dare - avere).toFixed(2),
@@ -1200,7 +1200,7 @@ function syncBooksFromAnalysis(page, analysisItem, options = {}) {
                 analisi: m.code,
                 dare: dare ? dare.toFixed(2) : '',
                 avere: avere ? avere.toFixed(2) : '',
-                descrizione: `[AUTO da Analisi] ${m.descrizione}`.trim(),
+                descrizione: m.descrizione || '',
                 autoRef: sourceId
             });
         }
