@@ -364,7 +364,6 @@ function renderPagesList() {
 
 function renderMain() {
     const page = getCurrentPage();
-    const editMode = getSettings().editMode;
     document.getElementById('currentPageTitle').textContent = page.title;
     const items = document.getElementById('items');
 
@@ -374,14 +373,15 @@ function renderMain() {
     }
 
     items.innerHTML = page.items.map((item) => {
+        const itemEditable = isItemEditableInCurrentMode(item);
         const cardClass = item.type === 'mastrino' ? 'item item--mastrino' : 'item item--wide';
-        const extraMastrinoBtn = editMode && item.type === 'mastrino'
+        const extraMastrinoBtn = itemEditable && item.type === 'mastrino'
             ? `<button class="btn btn-soft mini" data-action="item-add-side-mastrino" data-id="${item.id}">Mastrino accanto</button>`
             : '';
-        const addEntryBtn = !editMode || item.type === 'bilancio'
+        const addEntryBtn = !itemEditable || item.type === 'bilancio'
             ? ''
             : `<button class="btn btn-soft mini" data-action="item-add-entry" data-id="${item.id}">Aggiungi voce</button>`;
-        const manageBtns = editMode
+        const manageBtns = itemEditable
             ? `
                     <button class="btn btn-soft mini" data-action="item-up" data-id="${item.id}">Su</button>
                     <button class="btn btn-soft mini" data-action="item-down" data-id="${item.id}">Giu</button>
@@ -410,7 +410,7 @@ function renderMain() {
 
 function renderItemBody(item) {
     const d = item.data || {};
-    const editMode = getSettings().editMode;
+    const editMode = isItemEditableInCurrentMode(item);
     if (item.type === 'analisi') {
         const rows = (d.entries || []).map((r, idx) => `
             <div class="schema-box">
@@ -565,7 +565,7 @@ function renderItemBody(item) {
 }
 
 function renderEntryActions(itemId, entryIndex, compact) {
-    if (!getSettings().editMode) return '';
+    if (!isItemEditableById(itemId)) return '';
     const cls = compact ? 'mini' : 'mini';
     return `
         <div class="entry-actions">
@@ -575,6 +575,20 @@ function renderEntryActions(itemId, entryIndex, compact) {
             <button class="btn btn-danger ${cls}" data-action="entry-delete" data-id="${itemId}" data-entry="${entryIndex}">Elimina</button>
         </div>
     `;
+}
+
+function isItemEditableInCurrentMode(item) {
+    const settings = getSettings();
+    if (!settings.editMode) return false;
+    if (!settings.autoSyncAnalysis) return true;
+    return item.type === 'analisi';
+}
+
+function isItemEditableById(itemId) {
+    const page = getCurrentPage();
+    const item = page.items.find((x) => x.id === itemId);
+    if (!item) return false;
+    return isItemEditableInCurrentMode(item);
 }
 
 function escapeHtml(value) {
@@ -1244,6 +1258,14 @@ function onRootClick(e) {
     const action = button.getAttribute('data-action');
     const id = button.getAttribute('data-id');
     const entry = Number(button.getAttribute('data-entry'));
+
+    const itemEditActions = new Set([
+        'item-delete', 'item-up', 'item-down', 'item-add-side-mastrino', 'item-add-entry', 'item-edit',
+        'entry-up', 'entry-down', 'entry-delete', 'entry-edit'
+    ]);
+    if (itemEditActions.has(action) && !isItemEditableById(id)) {
+        return;
+    }
 
     if (action === 'select-page') setCurrentPage(id);
     if (action === 'page-delete') deletePage(id);
