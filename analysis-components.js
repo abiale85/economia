@@ -79,7 +79,12 @@
                                 <input name="seEimporto" value="${escapeHtml(data.seEimporto || '')}" placeholder="Importo">
                                 <input list="contoSuggestions" name="seEconto" value="${escapeHtml(data.seEconto || '')}" placeholder="Conto">
                                 <input name="seEdescrizione" value="${escapeHtml(data.seEdescrizione || '')}" placeholder="Descrizione">
-                                <input name="seEcodice" value="${escapeHtml(data.seEcodice || '')}" placeholder="Codice (VFA/VFP/VEN/VEP)">
+                                <select name="seEcodice">
+                                    <option value="VFA" ${(data.seEcodice || 'VFA') === 'VFA' ? 'selected' : ''}>VFA</option>
+                                    <option value="VFP" ${data.seEcodice === 'VFP' ? 'selected' : ''}>VFP</option>
+                                    <option value="VEN" ${data.seEcodice === 'VEN' ? 'selected' : ''}>VEN</option>
+                                    <option value="VEP" ${data.seEcodice === 'VEP' ? 'selected' : ''}>VEP</option>
+                                </select>
                             </div>
                         </td>
                         <td>
@@ -87,7 +92,12 @@
                                 <input name="seUimporto" value="${escapeHtml(data.seUimporto || '')}" placeholder="Importo">
                                 <input list="contoSuggestions" name="seUconto" value="${escapeHtml(data.seUconto || '')}" placeholder="Conto">
                                 <input name="seUdescrizione" value="${escapeHtml(data.seUdescrizione || '')}" placeholder="Descrizione">
-                                <input name="seUcodice" value="${escapeHtml(data.seUcodice || '')}" placeholder="Codice (VFA/VFP/VEN/VEP)">
+                                <select name="seUcodice">
+                                    <option value="VFA" ${(data.seUcodice || 'VFP') === 'VFA' ? 'selected' : ''}>VFA</option>
+                                    <option value="VFP" ${(data.seUcodice || 'VFP') === 'VFP' ? 'selected' : ''}>VFP</option>
+                                    <option value="VEN" ${data.seUcodice === 'VEN' ? 'selected' : ''}>VEN</option>
+                                    <option value="VEP" ${data.seUcodice === 'VEP' ? 'selected' : ''}>VEP</option>
+                                </select>
                             </div>
                         </td>
                     </tr>
@@ -98,7 +108,12 @@
                                 <input name="sfEimporto" value="${escapeHtml(data.sfEimporto || '')}" placeholder="Importo">
                                 <input list="contoSuggestions" name="sfEconto" value="${escapeHtml(data.sfEconto || '')}" placeholder="Conto">
                                 <input name="sfEdescrizione" value="${escapeHtml(data.sfEdescrizione || '')}" placeholder="Descrizione">
-                                <input name="sfEcodice" value="${escapeHtml(data.sfEcodice || '')}" placeholder="Codice (VFA/VFP/VEN/VEP)">
+                                <select name="sfEcodice">
+                                    <option value="VFA" ${data.sfEcodice === 'VFA' ? 'selected' : ''}>VFA</option>
+                                    <option value="VFP" ${data.sfEcodice === 'VFP' ? 'selected' : ''}>VFP</option>
+                                    <option value="VEN" ${data.sfEcodice === 'VEN' ? 'selected' : ''}>VEN</option>
+                                    <option value="VEP" ${(data.sfEcodice || 'VEP') === 'VEP' ? 'selected' : ''}>VEP</option>
+                                </select>
                             </div>
                         </td>
                         <td>
@@ -106,7 +121,12 @@
                                 <input name="sfUimporto" value="${escapeHtml(data.sfUimporto || '')}" placeholder="Importo">
                                 <input list="contoSuggestions" name="sfUconto" value="${escapeHtml(data.sfUconto || '')}" placeholder="Conto">
                                 <input name="sfUdescrizione" value="${escapeHtml(data.sfUdescrizione || '')}" placeholder="Descrizione">
-                                <input name="sfUcodice" value="${escapeHtml(data.sfUcodice || '')}" placeholder="Codice (VFA/VFP/VEN/VEP)">
+                                <select name="sfUcodice">
+                                    <option value="VFA" ${data.sfUcodice === 'VFA' ? 'selected' : ''}>VFA</option>
+                                    <option value="VFP" ${data.sfUcodice === 'VFP' ? 'selected' : ''}>VFP</option>
+                                    <option value="VEN" ${(data.sfUcodice || 'VEN') === 'VEN' ? 'selected' : ''}>VEN</option>
+                                    <option value="VEP" ${data.sfUcodice === 'VEP' ? 'selected' : ''}>VEP</option>
+                                </select>
                             </div>
                         </td>
                     </tr>
